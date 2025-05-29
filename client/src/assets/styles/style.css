@@ -1,0 +1,67 @@
+/* Stiluri Globale */
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #fff0f5; /* Roz deschis pentru fundal */
+    color: #333;
+}
+
+a {
+    color: #ff69b4; /* Roz închis pentru link-uri */
+    text-decoration: none;
+}
+
+a:hover {
+    color: #ff1493; /* Roz mai închis la hover */
+}
+
+.btn-primary {
+    background-color: #ff69b4;
+    border-color: #ff69b4;
+}
+
+.btn-primary:hover {
+    background-color: #ff1493;
+    border-color: #ff1493;
+}
+
+.btn-secondary {
+    background-color: #ffcccb;
+    border-color: #ffcccb;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background-color: #ff69b4;
+    border-color: #ff69b4;
+    color: #fff;
+}
+
+.navbar {
+    background-color: #ffcccb; /* Roz deschis pentru navbar */
+}
+
+.navbar-brand, .nav-link {
+    color: #333 !important;
+}
+
+.nav-link:hover {
+    color: #ff69b4 !important;
+}
+
+.footer {
+    background-color: #ffcccb;
+    color: #333;
+    padding: 20px 0;
+    text-align: center;
+    margin-top: auto; /* Asigură că footer-ul rămâne în partea de jos */
+}
+
+.footer a {
+    color: #333;
+}
+
+.footer a:hover {
+    color: #ff69b4;
+}

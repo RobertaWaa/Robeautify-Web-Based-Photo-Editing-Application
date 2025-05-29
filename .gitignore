@@ -1,0 +1,14 @@
+# Dependencies
+/node_modules
+
+# Environment variables
+.env
+
+# Build files
+/build
+
+# IDE specific files
+.idea
+.vscodenode_modules/
+node_modules/
+.env
