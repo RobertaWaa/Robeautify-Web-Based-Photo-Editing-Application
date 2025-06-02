@@ -1,67 +1,318 @@
-/* Stiluri Globale */
+/* Navbar Styles */
 body {
-    font-family: 'Arial', sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #fff0f5; /* Roz deschis pentru fundal */
-    color: #333;
+  font-family: "Arial", sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #fff0f5;
+  color: #333;
+}
+
+:root {
+  --robeautify: #ff6b9d;
+  --robeautify-dark: #e05d8b;
+  --robeautify-light: rgba(255, 107, 157, 0.1);
 }
 
 a {
-    color: #ff69b4; /* Roz închis pentru link-uri */
-    text-decoration: none;
+  color: #ff69b4;
+  text-decoration: none;
 }
 
 a:hover {
-    color: #ff1493; /* Roz mai închis la hover */
+  color: #ff1493;
 }
 
+/* Button Styles */
 .btn-primary {
-    background-color: #ff69b4;
-    border-color: #ff69b4;
+  background-color: #ff69b4;
+  border-color: #ff69b4;
 }
 
 .btn-primary:hover {
-    background-color: #ff1493;
-    border-color: #ff1493;
+  background-color: #ff1493;
+  border-color: #ff1493;
 }
 
 .btn-secondary {
-    background-color: #ffcccb;
-    border-color: #ffcccb;
-    color: #333;
+  background-color: #ffcccb;
+  border-color: #ffcccb;
+  color: #333;
 }
 
 .btn-secondary:hover {
-    background-color: #ff69b4;
-    border-color: #ff69b4;
-    color: #fff;
+  background-color: #ff69b4;
+  border-color: #ff69b4;
+  color: #fff;
 }
 
+/* Navbar Styles */
 .navbar {
-    background-color: #ffcccb; /* Roz deschis pentru navbar */
+  background-color: #ffcccb;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
-.navbar-brand, .nav-link {
-    color: #333 !important;
+.navbar-brand {
+  color: #333 !important;
+  display: flex;
+  align-items: center;
+  margin-left: 1rem;
 }
 
-.nav-link:hover {
-    color: #ff69b4 !important;
+.text-robeautify-dark {
+  color: var(--robeautify) !important;
+  margin-left: 0.5rem;
 }
 
+.border-robeautify {
+  border-color: var(--robeautify) !important;
+}
+
+.btn-robeautify {
+  background-color: var(--robeautify) !important;
+  border-color: var(--robeautify) !important;
+  color: white !important;
+}
+
+.btn-robeautify:hover {
+  background-color: var(--robeautify-dark) !important;
+  border-color: var(--robeautify-dark) !important;
+  color: white !important;
+}
+
+.btn-outline-robeautify {
+  color: var(--robeautify) !important;
+  border-color: var(--robeautify) !important;
+  background-color: transparent !important;
+}
+
+.btn-outline-robeautify:hover {
+  background-color: var(--robeautify-light) !important;
+  color: var(--robeautify) !important;
+}
+
+/* Nav Link Styles */
+.nav-link {
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem !important;
+  color: #333 !important;
+  position: relative;
+}
+
+.nav-link:hover:not(.btn) {
+  color: var(--robeautify) !important;
+}
+
+.nav-link.active {
+  color: var(--robeautify) !important;
+  font-weight: 500 !important;
+}
+
+.nav-link.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 1rem;
+  right: 1rem;
+  height: 2px;
+  background-color: var(--robeautify);
+}
+
+.navbar-nav {
+  align-items: center;
+}
+
+.nav-item {
+  margin: 0 0.3rem;
+}
+
+.nav-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-link {
+  position: relative;
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.nav-link::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  right: 50%;
+  height: 2px;
+  background-color: var(--robeautify);
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.nav-link:hover::before,
+.nav-link.active::before {
+  left: 0;
+  right: 0;
+}
+
+.btn-outline-robeautify {
+  overflow: hidden;
+  position: relative;
+}
+
+.btn-outline-robeautify::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background-color: var(--robeautify-light);
+  transition: all 0.4s ease;
+  z-index: 0;
+}
+
+.btn-outline-robeautify:hover::after {
+  left: 0;
+}
+
+.btn-robeautify {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-robeautify::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: all 0.4s ease;
+}
+
+.btn-robeautify:hover::after {
+  left: 0;
+}
+
+.navbar-toggler {
+  border: none;
+  outline: none;
+  box-shadow: none !important;
+  background: none;
+  padding: 0.5rem;
+}
+
+.navbar-toggler-icon {
+  transition: all 0.3s ease;
+}
+
+.mobile-menu {
+  position: relative;
+  z-index: 1000;
+}
+
+.mobile-menu-enter {
+  opacity: 0;
+  max-height: 0;
+}
+
+.mobile-menu-enter-active {
+  opacity: 1;
+  max-height: 500px;
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-exit {
+  opacity: 1;
+  max-height: 500px;
+}
+
+.mobile-menu-exit-active {
+  opacity: 0;
+  max-height: 0;
+  transition: all 0.3s ease;
+}
+
+.navbar-nav .nav-item .btn {
+  margin: 0.25rem 0;
+  text-align: left;
+  padding: 0.5rem 1rem;
+  width: 100%;
+}
+
+.navbar-nav * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+.nav-link span::selection,
+.btn span::selection {
+  background: rgba(255, 107, 157, 0.3);
+  padding: 0;
+  margin: 0;
+}
+
+.nav-link:active {
+  transform: translateY(1px);
+}
+
+/* Button hamburger */
+.navbar-toggler {
+  border: none;
+  background: transparent !important;
+  padding: 0.5rem;
+}
+
+.navbar-toggler:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Footer Styles */
 .footer {
-    background-color: #ffcccb;
-    color: #333;
-    padding: 20px 0;
-    text-align: center;
-    margin-top: auto; /* Asigură că footer-ul rămâne în partea de jos */
+  background-color: #ffcccb;
+  color: #333;
+  padding: 20px 0;
+  text-align: center;
+  margin-top: auto;
 }
 
 .footer a {
-    color: #333;
+  color: #333;
 }
 
 .footer a:hover {
-    color: #ff69b4;
+  color: #ff69b4;
+}
+
+/* Desktop Styles */
+@media (min-width: 992px) {
+  .navbar-collapse {
+    display: flex !important;
+    flex-basis: auto;
+  }
+
+  .navbar-toggler {
+    display: none;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 991.98px) {
+  .navbar-collapse {
+    display: none;
+  }
+
+  .mobile-menu {
+    position: relative;
+    z-index: 1000;
+  }
+
+  .navbar-nav .btn {
+    margin: 0.5rem 0;
+    text-align: center;
+  }
 }
