@@ -104,7 +104,7 @@ const Contact = () => {
                                 </div>
                                 <div>
                                     <h4>Phone</h4>
-                                    <p>+40 760 375 665</p>
+                                    <p>+40 123 456 789</p>
                                 </div>
                             </div>
                             

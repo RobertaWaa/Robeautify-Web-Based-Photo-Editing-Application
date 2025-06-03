@@ -194,7 +194,7 @@ function Footer() {
           <FooterColumn>
             <FooterHeading>Contact</FooterHeading>
             <FooterText>robeautify@gmail.com</FooterText>
-            <FooterText>+40 760 375 665</FooterText>
+            <FooterText>+40 123 456 789</FooterText>
             <FooterText>Bucharest, Romania</FooterText>
           </FooterColumn>
         </FooterGrid>

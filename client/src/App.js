@@ -12,6 +12,8 @@ import AuthPage from './pages/AuthPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail'; 
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import './App.css';
 
 // Layout component that wraps all pages
@@ -51,7 +53,9 @@ const router = createBrowserRouter([
         { path: 'my-account', element: <MyAccount /> },
         { path: 'forgot-password', element: <ForgotPassword /> },
         { path: 'reset-password', element: <ResetPassword /> },
-        { path: 'verify-email', element: <VerifyEmail /> } // Acum componenta este definită
+        { path: 'verify-email', element: <VerifyEmail /> },
+        {path: '/privacy-policy', element: <PrivacyPolicy />},
+        {path: '/terms-of-service', element: <TermsOfService />}
       ]
     }
   ], {
