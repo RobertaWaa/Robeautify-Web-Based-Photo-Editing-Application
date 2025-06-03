@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import NotFound from "./pages/NotFound";
 import "./App.css";
 
 // Layout component that wraps all pages
@@ -59,6 +60,7 @@ const router = createBrowserRouter(
         { path: "verify-email", element: <VerifyEmail /> },
         { path: "privacy-policy", element: <PrivacyPolicy /> },
         { path: "terms-of-service", element: <TermsOfService /> },
+        { path: "*", element: <NotFound /> },
       ],
     },
   ],
