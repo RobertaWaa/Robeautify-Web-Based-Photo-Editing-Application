@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaEnvelope, FaPhoneAlt, FaMapMarkerAlt } from 'react-icons/fa';
 import SendMessageButton from '../components/SendMessageButton';
-import '../assets/styles/contact.css';
 
 const Contact = () => {
     const [formData, setFormData] = useState({
@@ -210,8 +209,158 @@ const Contact = () => {
     );
 };
 
+// Styled components
 const ContactSection = styled.section`
-    /* Additional styled-components styles if needed */
+    padding: 80px 0;
+    background-color: #fff0f5;
+
+    .contact-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    .contact-heading {
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 40px;
+        color: #ff69b4;
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(90deg, #ff69b4, #ff9a9e);
+        }
+    }
+
+    .contact-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 40px;
+    }
+
+    .contact-info {
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 5px 15px rgba(255, 105, 180, 0.1);
+
+        h3 {
+            color: #ff69b4;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        p {
+            text-align: center;
+        }
+    }
+
+    .contact-details {
+        margin-top: 30px;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .contact-icon {
+        width: 40px;
+        height: 40px;
+        background-color: #ffcccb;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        color: #ff69b4;
+        font-size: 18px;
+    }
+
+    .contact-form {
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 5px 15px rgba(255, 105, 180, 0.1);
+
+        h3 {
+            text-align: center;
+        }
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-weight: 500;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: all 0.3s;
+
+        &:focus {
+            border-color: #ff69b4;
+            box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.2);
+            outline: none;
+        }
+
+        &::placeholder {
+            color: #aaa;
+            font-style: italic;
+        }
+    }
+
+    textarea.form-control {
+        min-height: 150px;
+        resize: vertical;
+    }
+
+    .submit-btn-container {
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    /* Animation */
+    .animate-contact {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.8s ease-out;
+
+        &.show-element {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        padding: 60px 0;
+        
+        .contact-heading {
+            font-size: 2rem;
+        }
+        
+        .contact-info, .contact-form {
+            padding: 30px;
+        }
+    }
 `;
 
 const SuccessMessage = styled.p`
