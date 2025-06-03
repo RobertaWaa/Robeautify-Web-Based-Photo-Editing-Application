@@ -170,108 +170,93 @@ app.post('/api/verify-email', async (req, res) => {
   }
 });
 
-// User authentication endpoints
+// User signup endpoint
 app.post('/api/signup', async (req, res) => {
   try {
-      const { username, email, password } = req.body;
+    const { name, email, password } = req.body;
 
-      // Check if username exists
-      const [existingUsername] = await pool.query(
-          'SELECT * FROM users WHERE username = ?', 
-          [username]
-      );
-      
-      if (existingUsername.length > 0) {
-          return res.status(400).json({
-              success: false,
-              field: 'username',
-              message: 'This username is already taken. Please choose another one.'
-          });
-      }
-
-      // Check if email exists
-      const [existingEmail] = await pool.query(
-          'SELECT * FROM users WHERE email = ?',
-          [email]
-      );
-      
-      if (existingEmail.length > 0) {
-          return res.status(400).json({
-              success: false,
-              field: 'email',
-              message: 'This email is already associated with an account. Please use another email.'
-          });
-      }
-
-      // Hash password and create user
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      const [result] = await pool.query(
-          'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-          [username, email, hashedPassword]
-      );
-
-      // Generate auth token
-      const token = jwt.sign(
-          { userId: result.insertId },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-      );
-
-      // Generate verification token
-      const verificationToken = jwt.sign(
-          { userId: result.insertId },
-          JWT_SECRET,
-          { expiresIn: '1d' }
-      );
-
-      // Store verification token in database
-      await pool.query(
-          'UPDATE users SET verification_token = ? WHERE id = ?',
-          [verificationToken, result.insertId]
-      );
-
-      // Send verification email
-      const verificationLink = `http://localhost:3000/verify-email?token=${verificationToken}`;
-      
-      const mailOptions = {
-          from: `"Robeautify" <${process.env.EMAIL_USER}>`,
-          to: email,
-          subject: 'Verify Your Robeautify Account',
-          html: `
-              <h2>Welcome to Robeautify!</h2>
-              <p>Thank you for creating an account. Please verify your email address by clicking the link below:</p>
-              <a href="${verificationLink}">Verify Email Address</a>
-              <p>This link will expire in 24 hours.</p>
-              <p>If you didn't create this account, please ignore this email.</p>
-          `
-      };
-
-      await transporter.sendMail(mailOptions);
-
-      // Return success response
-res.json({ 
-  success: true,
-  token,
-  user: {
-      id: result.insertId,
-      username,
-      email,
-      fullName: '',
-      bio: '',
-      profilePic: 'default.jpg',
-      emailVerified: false // Make sure this is included
-  },
-  message: 'Account created successfully! Please check your email to verify your account.'
-});
-
-  } catch (error) {
-      console.error('Signup error:', error);
-      res.status(500).json({
-          success: false,
-          message: 'Registration failed due to server error'
+    // Check if email exists
+    const [existingEmail] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+    
+    if (existingEmail.length > 0) {
+      return res.status(400).json({
+        success: false,
+        field: 'email',
+        message: 'This email is already associated with an account.'
       });
+    }
+
+    // Hash password and create user
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const [result] = await pool.query(
+      'INSERT INTO users (full_name, email, password_hash) VALUES (?, ?, ?)',
+      [name, email, hashedPassword]
+    );
+
+    // Generate auth token
+    const token = jwt.sign(
+      { userId: result.insertId },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Generate verification token
+    const verificationToken = jwt.sign(
+      { userId: result.insertId },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    // Store verification token in database
+    await pool.query(
+      'UPDATE users SET verification_token = ? WHERE id = ?',
+      [verificationToken, result.insertId]
+    );
+
+    // Send verification email
+    const verificationLink = `http://localhost:3000/verify-email?token=${verificationToken}`;
+    
+    const mailOptions = {
+      from: `"Robeautify" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Verify Your Robeautify Account',
+      html: `
+        <h2>Welcome to Robeautify!</h2>
+        <p>Thank you for creating an account. Please verify your email address by clicking the link below:</p>
+        <a href="${verificationLink}">Verify Email Address</a>
+        <p>This link will expire in 24 hours.</p>
+        <p>If you didn't create this account, please ignore this email.</p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    // Return success response
+    res.json({ 
+      success: true,
+      token,
+      user: {
+        id: result.insertId,
+        name,
+        email,
+        fullName: name,
+        bio: '',
+        profilePic: 'default.jpg',
+        emailVerified: false
+      },
+      message: 'Account created successfully! Please check your email to verify your account.'
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed due to server error'
+    });
   }
 });
 
@@ -342,67 +327,67 @@ app.post('/api/resend-verification', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   try {
-      const { emailOrUsername, password } = req.body;
+    const { email, password } = req.body; // Make sure this says 'email' not 'emailOrUsername'
 
-      if (!emailOrUsername || !password) {
-          return res.status(400).json({ 
-              success: false, 
-              error: 'Email/Username and password are required' 
-          });
-      }
+    console.log('Received login request:', req.body); // Add this for debugging
 
-      const isEmail = emailOrUsername.includes('@');
-      
-      const [users] = await pool.query(
-          `SELECT * FROM users WHERE ${isEmail ? 'email = ?' : 'username = ?'}`,
-          [emailOrUsername]
-      );
-
-      if (users.length === 0) {
-          return res.status(401).json({ 
-              success: false,
-              field: 'emailOrUsername',
-              message: isEmail 
-                  ? 'No account found with this email' 
-                  : 'No account found with this username'
-          });
-      }
-
-      const user = users[0];
-      const passwordValid = await bcrypt.compare(password, user.password_hash);
-
-      if (!passwordValid) {
-          return res.status(401).json({ 
-              success: false,
-              field: 'password',
-              message: 'Incorrect password'
-          });
-      }
-
-      const token = jwt.sign(
-          { userId: user.id },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-      );
-
-      res.json({ 
-        success: true,
-        token,
-        user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            fullName: user.full_name,
-            bio: user.bio,
-            profilePic: user.profile_pic
-        }
+    if (!email || !password) {
+      console.log('Missing fields - email:', email, 'password:', password); // Debug log
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Email and password are required' // Update this message
       });
+    }
+    
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (users.length === 0) {
+      return res.status(401).json({ 
+        success: false,
+        field: 'email',
+        message: 'No account found with this email' 
+      });
+    }
+
+    const user = users[0];
+    const passwordValid = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordValid) {
+      return res.status(401).json({ 
+        success: false,
+        field: 'password',
+        message: 'Incorrect password'
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ 
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.full_name,
+        email: user.email,
+        fullName: user.full_name,
+        bio: user.bio,
+        profilePic: user.profile_pic,
+        emailVerified: user.email_verified
+      }
+    });
   } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ 
-          success: false, 
-          error: 'An error occurred. Please try again later.' 
-      });
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'An error occurred. Please try again later.' 
+    });
   }
 });
 
@@ -441,72 +426,88 @@ app.post('/api/verify-token', async (req, res) => {
   }
 });
 
+import { OAuth2Client } from 'google-auth-library';
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 app.post('/api/google-auth', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { credential } = req.body;
+    
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    
+    
+    
+    // Debugging - afișează datele primite de la Google
+    console.log('Google Payload:', {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture
+    });
+    const googleId = payload.sub;
+    const email = payload.email;
+    const name = payload.name || payload.given_name;
 
-    if (!token) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Token is required' 
-      });
-    }
-
-    // In production, verify Google token here
-    const googleUser = {
-      id: 'google_' + Math.random().toString(36).substring(2, 9),
-      email: req.body.email || 'user@gmail.com',
-      name: req.body.name || 'Google User'
-    };
-
+    // Verifică dacă utilizatorul există sau creează-l
     const [existingUser] = await pool.query(
-      'SELECT * FROM users WHERE google_id = ? OR email = ?',
-      [googleUser.id, googleUser.email]
+      'SELECT * FROM users WHERE email = ?',
+      [payload.email]
     );
 
     let user;
     if (existingUser.length > 0) {
+      // Actualizăm datele dacă Google le-a modificat
+      await pool.query(
+        'UPDATE users SET full_name = ?, profile_pic = ? WHERE id = ?',
+        [name, payload.picture, existingUser[0].id]
+      );
       user = existingUser[0];
     } else {
+      // Creăm cont nou
       const [result] = await pool.query(
-        'INSERT INTO users (email, google_id) VALUES (?, ?)',
-        [googleUser.email, googleUser.id]
+        'INSERT INTO users (full_name, email, google_id, profile_pic, email_verified) VALUES (?, ?, ?, ?, TRUE)',
+        [name, email, googleId, payload.picture]
       );
       
       const [newUser] = await pool.query(
         'SELECT * FROM users WHERE id = ?',
         [result.insertId]
       );
-      
       user = newUser[0];
     }
 
-    const authToken = jwt.sign(
+    // Generăm token JWT
+    const token = jwt.sign(
       { userId: user.id },
-      JWT_SECRET,
-      { expiresIn: '1d' }
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
     );
 
-    res.json({ 
+    res.json({
       success: true,
-      token: authToken,
+      token,
       user: {
         id: user.id,
-        username: user.username || '',
+        name: user.full_name,
         email: user.email,
-        fullName: user.full_name || googleUser.name,
-        bio: user.bio || '',
-        profilePic: user.profile_pic || 'default.jpg'
+        profilePic: user.profile_pic || payload.picture,
+        emailVerified: true
       }
     });
   } catch (error) {
-    console.error('Google auth error:', error);
+    console.error('Google Auth Error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Google authentication failed' 
+      error: 'Authentication failed',
+      details: error.message 
     });
   }
 });
+
 
 
 

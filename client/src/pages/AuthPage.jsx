@@ -6,6 +6,386 @@ import { GoogleLogin } from '@react-oauth/google';
 import styled from 'styled-components';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
+function AuthPage({ type }) {
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+    });
+    const [agreeToTerms, setAgreeToTerms] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const { login } = useAuth();
+    const navigate = useNavigate();
+
+    const handleChange = (e) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value
+        });
+    };
+
+    // Password validation checks
+    const passwordChecks = {
+        uppercase: /[A-Z]/.test(formData.password),
+        lowercase: /[a-z]/.test(formData.password),
+        number: /[0-9]/.test(formData.password),
+        specialChar: /[^A-Za-z0-9]/.test(formData.password)
+    };
+
+    // Check if passwords match
+    const passwordsMatch = formData.password === formData.confirmPassword && formData.password !== '';
+
+    const validate = () => {
+  const newErrors = {};
+  
+  if (type === 'signup') {
+    if (!formData.name.trim()) newErrors.name = 'Full name is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    if (!formData.password) newErrors.password = 'Password is required';
+    
+    if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+    
+    if (!passwordsMatch) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+  } else {
+    // Login validation
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+  }
+  
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
+    const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validate()) {
+    console.log('Validation failed');
+    return;
+  }
+
+  setIsSubmitting(true);
+  setErrors({});
+  
+  try {
+    let payload;
+    let endpoint;
+    
+    if (type === 'signup') {
+      payload = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password
+      };
+      endpoint = '/api/signup';
+    } else {
+      // This is the login payload - make sure it matches your backend
+      payload = {
+        email: formData.email,
+        password: formData.password
+      };
+      endpoint = '/api/login'; // Make sure this is correct
+    }
+
+    console.log('Sending payload:', payload); // Debug log
+
+    const response = await fetch(`http://localhost:5000${endpoint}`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await response.json();
+    console.log('API Response:', result); // Debug log
+    
+    if (!response.ok) {
+      if (result.field) {
+        setErrors({ [result.field]: result.message });
+      } else {
+        setErrors({ form: result.error || 'Authentication error' });
+      }
+      return;
+    }
+    
+    if (result.success) {
+      await login(result.user, result.token);
+      navigate('/my-account');
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+    setErrors({ form: 'An error occurred. Please try again later.' });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+  try {
+    const response = await fetch('http://localhost:5000/api/google-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        credential: credentialResponse.credential,
+        clientId: credentialResponse.clientId  // Adaugă acest camp
+      })
+    });
+
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      await login(result.user, result.token);
+      navigate('/my-account');
+    } else {
+      setErrors({ form: result.error || 'Google authentication failed' });
+    }
+  } catch (error) {
+    setErrors({ form: 'Google authentication error' });
+  }
+};
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
+    const toggleConfirmPasswordVisibility = () => {
+        setShowConfirmPassword(!showConfirmPassword);
+    };
+
+    const checkUsernameAvailability = async (username) => {
+        if (!username || username.length < 3) return;
+        
+        try {
+            const response = await fetch(`http://localhost:5000/api/check-username?username=${encodeURIComponent(username)}`);
+            const data = await response.json();
+            
+            if (!data.available) {
+                setErrors(prev => ({ 
+                    ...prev, 
+                    username: 'This username is already taken. Please choose another one.' 
+                }));
+            } else if (errors.username && data.available) {
+                setErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.username;
+                    return newErrors;
+                });
+            }
+        } catch (error) {
+            console.error('Availability check error:', error);
+        }
+    };
+
+    return (
+        <AuthContainer>
+            <AuthCard>
+                <Logo>Robeautify<span>.</span></Logo>
+                <h2>{type === 'login' ? 'Welcome Back' : 'Create Your Account'}</h2>
+                
+                {errors.form && <ErrorMessage>{errors.form}</ErrorMessage>}
+                
+                <AuthForm onSubmit={handleSubmit}>
+                    {type === 'signup' ? (
+  <>
+    <FormGroup>
+      <label htmlFor="name">Full Name</label>
+      <InputWrapper>
+        <InputField
+          type="text"
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          placeholder="John Doe"
+        />
+      </InputWrapper>
+      {errors.name && <FieldError>{errors.name}</FieldError>}
+    </FormGroup>
+    
+    <FormGroup>
+      <label htmlFor="email">Email</label>
+      <InputWrapper>
+        <InputField
+          type="email"
+          id="email"
+          name="email"
+          value={formData.email || ''}
+          onChange={handleChange}
+          placeholder="your@email.com"
+        />
+      </InputWrapper>
+      {errors.email && <FieldError>{errors.email}</FieldError>}
+    </FormGroup>
+  </>
+) : (
+                        <FormGroup>
+                            <label htmlFor="email">Email</label>
+    <InputWrapper>
+      <InputField
+        type="email"
+        id="email"
+        name="email"
+        value={formData.email || ''}
+        onChange={handleChange}
+        placeholder="your@email.com"
+      />
+    </InputWrapper>
+    {errors.email && <FieldError>{errors.email}</FieldError>}
+                        </FormGroup>
+                    )}
+                    
+                    <FormGroup>
+                        <label htmlFor="password">Password</label>
+                        <InputWrapper>
+                            <InputField
+                                type={showPassword ? "text" : "password"}
+                                id="password"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                placeholder="••••••••"
+                            />
+                            <TogglePassword 
+                                type="button" 
+                                onClick={togglePasswordVisibility}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                            </TogglePassword>
+                        </InputWrapper>
+                        {errors.password && <FieldError>{errors.password}</FieldError>}
+                           
+    
+    {type === 'login' && (
+        <ForgotPasswordLink>
+            <Link to="/forgot-password">Forgot password?</Link>
+        </ForgotPasswordLink>
+    )}
+                        
+                        {type === 'signup' && (
+    <PasswordRequirements>
+        <div>
+            {passwordChecks.uppercase ? (
+                <RequirementMet>✓ Uppercase letter</RequirementMet>
+            ) : (
+                <RequirementUnmet>✗ Uppercase letter</RequirementUnmet>
+            )}
+        </div>
+        <div>
+            {passwordChecks.lowercase ? (
+                <RequirementMet>✓ Lowercase letter</RequirementMet>
+            ) : (
+                <RequirementUnmet>✗ Lowercase letter</RequirementUnmet>
+            )}
+        </div>
+        <div>
+            {passwordChecks.number ? (
+                <RequirementMet>✓ Number</RequirementMet>
+            ) : (
+                <RequirementUnmet>✗ Number</RequirementUnmet>
+            )}
+        </div>
+        <div>
+            {passwordChecks.specialChar ? (
+                <RequirementMet>✓ Special character</RequirementMet>
+            ) : (
+                <RequirementUnmet>✗ Special character</RequirementUnmet>
+            )}
+        </div>
+    </PasswordRequirements>
+)}
+                    </FormGroup>
+                    
+                    {type === 'signup' && (
+                        <FormGroup>
+                            <label htmlFor="confirmPassword">Confirm Password</label>
+                            <InputWrapper>
+                                <InputField
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    id="confirmPassword"
+                                    name="confirmPassword"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    placeholder="••••••••"
+                                />
+                                <TogglePassword 
+                                    type="button" 
+                                    onClick={toggleConfirmPasswordVisibility}
+                                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                                </TogglePassword>
+                            </InputWrapper>
+                            {errors.confirmPassword && <FieldError>{errors.confirmPassword}</FieldError>}
+                            
+                            {formData.confirmPassword && (
+                                <PasswordMatchIndicator $match={passwordsMatch}>
+                                    {passwordsMatch ? '✓ Passwords match' : '✗ Passwords do not match'}
+                                </PasswordMatchIndicator>
+                            )}
+                        </FormGroup>
+                    )}
+                    
+                    {type === 'signup' && (
+  <TermsCheckbox>
+    <input 
+      type="checkbox" 
+      id="agreeToTerms"
+      checked={agreeToTerms}
+      onChange={(e) => setAgreeToTerms(e.target.checked)}
+    />
+    <label htmlFor="agreeToTerms">
+      I agree to the <Link to="/terms-of-service">Terms of Service</Link> and{' '}
+      <Link to="/privacy-policy">Privacy Policy</Link>
+    </label>
+  </TermsCheckbox>
+)}
+
+<SubmitButton 
+  type="submit" 
+  disabled={isSubmitting || (type === 'signup' && !agreeToTerms)}
+>
+  {isSubmitting ? 'Processing...' : type === 'login' ? 'Log In' : 'Sign Up'}
+</SubmitButton>
+                </AuthForm>
+                
+                <Divider><span>OR</span></Divider>
+                
+                <GoogleButtonContainer>
+                    <GoogleLogin
+  onSuccess={handleGoogleSuccess}
+  onError={() => setErrors({ form: 'Google login failed' })}
+  useOneTap // Pentru butonul "Sign in with Google"
+  auto_select // Selectare automată pentru utilizatorii recurenți
+/>
+                </GoogleButtonContainer>
+                
+                <AuthLink>
+                    {type === 'login' ? (
+                        <>Don't have an account? <Link to="/signup">Sign up</Link></>
+                    ) : (
+                        <>Already have an account? <Link to="/login">Log in</Link></>
+                    )}
+                </AuthLink>
+            </AuthCard>
+        </AuthContainer>
+    );
+}
+
 const AuthContainer = styled.div`
     display: flex;
     min-height: 100vh;
@@ -93,15 +473,18 @@ const TogglePassword = styled.button`
 `;
 
 const PasswordRequirements = styled.div`
-    margin-top: 8px;
-    font-size: 0.85rem;
-    color: #666;
-    
-    div {
-        display: flex;
-        align-items: center;
-        margin-bottom: 5px;
-    }
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #666;
+  
+  div {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+  }
 `;
 
 const RequirementMet = styled.span`
@@ -237,375 +620,27 @@ const ForgotPasswordLink = styled.div`
     }
 `;
 
-function AuthPage({ type }) {
-    const [formData, setFormData] = useState({
-        username: '',
-        emailOrUsername: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
-    });
-    const [errors, setErrors] = useState({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const { login } = useAuth();
-    const navigate = useNavigate();
+const TermsCheckbox = styled.div`
+  display: flex;
+  align-items: center;
+  margin: 15px 0;
+  font-size: 0.9rem;
+  color: #555;
 
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-    };
+  input {
+    margin-right: 10px;
+    accent-color: #ff69b4;
+  }
 
-    // Password validation checks
-    const passwordChecks = {
-        uppercase: /[A-Z]/.test(formData.password),
-        lowercase: /[a-z]/.test(formData.password),
-        number: /[0-9]/.test(formData.password),
-        specialChar: /[^A-Za-z0-9]/.test(formData.password)
-    };
-
-    // Check if passwords match
-    const passwordsMatch = formData.password === formData.confirmPassword && formData.password !== '';
-
-    const validate = () => {
-        const newErrors = {};
-        
-        if (type === 'signup') {
-            if (!formData.username.trim()) newErrors.username = 'Username is required';
-            if (!formData.email.trim()) newErrors.email = 'Email is required';
-            if (!formData.password) newErrors.password = 'Password is required';
-            
-            if (formData.password.length < 8) {
-                newErrors.password = 'Password must be at least 8 characters';
-            }
-            
-            if (!passwordsMatch) {
-                newErrors.confirmPassword = 'Passwords do not match';
-            }
-        } else {
-            if (!formData.emailOrUsername.trim()) {
-                newErrors.emailOrUsername = 'Email or username is required';
-            }
-            if (!formData.password) {
-                newErrors.password = 'Password is required';
-            }
-        }
-        
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        //console.log('Form data:', formData); // debugging
-    if (!validate()) {
-        //console.log('Validation failed'); // Debugging
-        return;
+  a {
+    color: #ff69b4;
+    text-decoration: none;
+    margin: 0 5px;
+    
+    &:hover {
+      text-decoration: underline;
     }
-        
-        setIsSubmitting(true);
-        setErrors({});
-        
-        try {
-            let payload;
-            let endpoint;
-            
-            if (type === 'signup') {
-                // Pentru signup
-                payload = {
-                    username: formData.username,
-                    email: formData.email,
-                    password: formData.password
-                };
-                endpoint = '/api/signup';
-            } else {
-                // Pentru login
-                payload = {
-                    emailOrUsername: formData.emailOrUsername,
-                    password: formData.password
-                };
-                endpoint = '/api/login';
-            }
-    
-            const response = await fetch(`http://localhost:5000${endpoint}`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) {
-                if (result.field) {
-                    setErrors({ [result.field]: result.message });
-                } else {
-                    setErrors({ form: result.error || 'Authentication error' });
-                }
-                return;
-            }
-            
-            if (result.success) {
-                await login(result.user, result.token);
-                navigate('/my-account');
-            }
-        } catch (error) {
-            console.error('API Error:', error);
-            setErrors({ form: 'An error occurred. Please try again later.' });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleGoogleSuccess = async (credentialResponse) => {
-        try {
-            const response = await fetch('http://localhost:5000/api/google-auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: credentialResponse.credential })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                await login(result.user);
-                navigate('/my-account');
-            } else {
-                setErrors({ form: result.error || 'Google authentication failed' });
-            }
-        } catch (error) {
-            setErrors({ form: 'Google authentication error' });
-        }
-    };
-
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-    };
-
-    const toggleConfirmPasswordVisibility = () => {
-        setShowConfirmPassword(!showConfirmPassword);
-    };
-
-    const checkUsernameAvailability = async (username) => {
-        if (!username || username.length < 3) return;
-        
-        try {
-            const response = await fetch(`http://localhost:5000/api/check-username?username=${encodeURIComponent(username)}`);
-            const data = await response.json();
-            
-            if (!data.available) {
-                setErrors(prev => ({ 
-                    ...prev, 
-                    username: 'This username is already taken. Please choose another one.' 
-                }));
-            } else if (errors.username && data.available) {
-                setErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.username;
-                    return newErrors;
-                });
-            }
-        } catch (error) {
-            console.error('Availability check error:', error);
-        }
-    };
-
-    return (
-        <AuthContainer>
-            <AuthCard>
-                <Logo>Robeautify<span>.</span></Logo>
-                <h2>{type === 'login' ? 'Welcome Back' : 'Create Your Account'}</h2>
-                
-                {errors.form && <ErrorMessage>{errors.form}</ErrorMessage>}
-                
-                <AuthForm onSubmit={handleSubmit}>
-                    {type === 'signup' ? (
-                        <>
-                            <FormGroup>
-                                <label htmlFor="username">Username</label>
-                                <InputWrapper>
-                                    <InputField
-                                        type="text"
-                                        id="username"
-                                        name="username"
-                                        value={formData.username}
-                                        onChange={(e) => {
-                                            handleChange(e);
-                                            checkUsernameAvailability(e.target.value);
-                                        }}
-                                        onBlur={(e) => checkUsernameAvailability(e.target.value)}
-                                        placeholder="photo_lover"
-                                    />
-                                </InputWrapper>
-                                {errors.username && <FieldError>{errors.username}</FieldError>}
-                                {!errors.username && formData.username && formData.username.length > 2 && (
-                                    <AvailabilityMessage $available={true}>
-                                        ✓ Username available
-                                    </AvailabilityMessage>
-                                )}
-                            </FormGroup>
-                            
-                            <FormGroup>
-                                <label htmlFor="email">Email</label>
-                                <InputWrapper>
-                                    <InputField
-                                        type="email"
-                                        id="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        placeholder="your@email.com"
-                                    />
-                                </InputWrapper>
-                                {errors.email && <FieldError>{errors.email}</FieldError>}
-                            </FormGroup>
-                        </>
-                    ) : (
-                        <FormGroup>
-                            <label htmlFor="emailOrUsername">Email or Username</label>
-                            <InputWrapper>
-                                <InputField
-                                    type="text"
-                                    id="emailOrUsername"
-                                    name="emailOrUsername"
-                                    value={formData.emailOrUsername}
-                                    onChange={handleChange}
-                                    placeholder="your@email.com or username123"
-                                />
-                            </InputWrapper>
-                            {errors.emailOrUsername && <FieldError>{errors.emailOrUsername}</FieldError>}
-                        </FormGroup>
-                    )}
-                    
-                    <FormGroup>
-                        <label htmlFor="password">Password</label>
-                        <InputWrapper>
-                            <InputField
-                                type={showPassword ? "text" : "password"}
-                                id="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="••••••••"
-                            />
-                            <TogglePassword 
-                                type="button" 
-                                onClick={togglePasswordVisibility}
-                                aria-label={showPassword ? "Hide password" : "Show password"}
-                            >
-                                {showPassword ? <FaEyeSlash /> : <FaEye />}
-                            </TogglePassword>
-                        </InputWrapper>
-                        {errors.password && <FieldError>{errors.password}</FieldError>}
-                           
-    
-    {type === 'login' && (
-        <ForgotPasswordLink>
-            <Link to="/forgot-password">Forgot password?</Link>
-        </ForgotPasswordLink>
-    )}
-                        
-                        {type === 'signup' && (
-    <PasswordRequirements>
-        <div>
-            {passwordChecks.uppercase ? (
-                <RequirementMet>✓ Uppercase letter</RequirementMet>
-            ) : (
-                <RequirementUnmet>✗ Uppercase letter</RequirementUnmet>
-            )}
-        </div>
-        <div>
-            {passwordChecks.lowercase ? (
-                <RequirementMet>✓ Lowercase letter</RequirementMet>
-            ) : (
-                <RequirementUnmet>✗ Lowercase letter</RequirementUnmet>
-            )}
-        </div>
-        <div>
-            {passwordChecks.number ? (
-                <RequirementMet>✓ Number</RequirementMet>
-            ) : (
-                <RequirementUnmet>✗ Number</RequirementUnmet>
-            )}
-        </div>
-        <div>
-            {passwordChecks.specialChar ? (
-                <RequirementMet>✓ Special character</RequirementMet>
-            ) : (
-                <RequirementUnmet>✗ Special character</RequirementUnmet>
-            )}
-        </div>
-    </PasswordRequirements>
-)}
-                    </FormGroup>
-                    
-                    {type === 'signup' && (
-                        <FormGroup>
-                            <label htmlFor="confirmPassword">Confirm Password</label>
-                            <InputWrapper>
-                                <InputField
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    placeholder="••••••••"
-                                />
-                                <TogglePassword 
-                                    type="button" 
-                                    onClick={toggleConfirmPasswordVisibility}
-                                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                                >
-                                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                                </TogglePassword>
-                            </InputWrapper>
-                            {errors.confirmPassword && <FieldError>{errors.confirmPassword}</FieldError>}
-                            
-                            {formData.confirmPassword && (
-                                <PasswordMatchIndicator $match={passwordsMatch}>
-                                    {passwordsMatch ? '✓ Passwords match' : '✗ Passwords do not match'}
-                                </PasswordMatchIndicator>
-                            )}
-                        </FormGroup>
-                    )}
-                    
-                    <SubmitButton type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Processing...' : type === 'login' ? 'Log In' : 'Sign Up'}
-                    </SubmitButton>
-                </AuthForm>
-                
-                <Divider><span>OR</span></Divider>
-                
-                <GoogleButtonContainer>
-                    <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={() => setErrors({ form: 'Google login failed' })}
-                        theme="filled_blue"
-                        size="large"
-                        text={type === 'login' ? 'continue_with' : 'signup_with'}
-                        shape="pill"
-                        logo_alignment="left"
-                        width="300"
-                        ux_mode="popup"
-                        locale="en_US"  
-                    />
-                </GoogleButtonContainer>
-                
-                <AuthLink>
-                    {type === 'login' ? (
-                        <>Don't have an account? <Link to="/signup">Sign up</Link></>
-                    ) : (
-                        <>Already have an account? <Link to="/login">Log in</Link></>
-                    )}
-                </AuthLink>
-            </AuthCard>
-        </AuthContainer>
-    );
-}
+  }
+`;
 
 export default AuthPage;
