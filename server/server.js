@@ -15,6 +15,13 @@ dotenv.config();
 
 const app = express();
 
+// Add these before your routes
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+});
+
 // Database connection
 const pool = mysql.createPool({
   host: 'localhost',
@@ -54,7 +61,9 @@ const upload = multer({
 // Middleware
 app.use(cors({
   origin: 'http://localhost:3000',
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 app.use(bodyParser.json());
 

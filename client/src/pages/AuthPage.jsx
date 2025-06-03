@@ -134,13 +134,18 @@ function AuthPage({ type }) {
 };
 
     const handleGoogleSuccess = async (credentialResponse) => {
+  if (type === 'signup' && !agreeToTerms) {
+    setErrors({ form: 'You must agree to the Terms of Service and Privacy Policy' });
+    return;
+  }
+  
   try {
     const response = await fetch('http://localhost:5000/api/google-auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         credential: credentialResponse.credential,
-        clientId: credentialResponse.clientId  // Adaugă acest camp
+        clientId: credentialResponse.clientId
       })
     });
 
@@ -369,8 +374,10 @@ function AuthPage({ type }) {
                     <GoogleLogin
   onSuccess={handleGoogleSuccess}
   onError={() => setErrors({ form: 'Google login failed' })}
-  useOneTap // Pentru butonul "Sign in with Google"
-  auto_select // Selectare automată pentru utilizatorii recurenți
+  useOneTap
+  auto_select
+  ux_mode="popup" // Add this line
+  cookiePolicy="single_host_origin" // Add this line
 />
                 </GoogleButtonContainer>
                 
