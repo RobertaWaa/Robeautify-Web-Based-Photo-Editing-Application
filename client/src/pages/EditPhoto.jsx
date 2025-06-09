@@ -72,6 +72,14 @@ const EditPhoto = () => {
     temperature: 0
   });
 
+  // Funcție helper pentru a adăuga o nouă stare în istoric
+const addToHistory = (currentState) => {
+  const newHistory = history.slice(0, historyIndex + 1);
+  newHistory.push(currentState);
+  setHistory(newHistory);
+  setHistoryIndex(newHistory.length - 1);
+};
+
   // Salvează starea în localStorage când se modifică
   useEffect(() => {
     if (image && historyIndex === history.length - 1) {
@@ -296,45 +304,51 @@ const EditPhoto = () => {
   }, [image, processedImage, historyIndex, history, applyAllEffects]);
 
 
-  useEffect(() => {
-    const loadSavedState = async () => {
-      // Încărcăm imaginea din sessionStorage
-      const savedImage = sessionStorage.getItem(SESSION_KEY);
-      if (savedImage) {
-        const img = new Image();
-        img.onload = () => {
-          setImage(img);
-          const canvas = canvasRef.current;
-          if (canvas) {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            applyAllEffects(img);
-          }
-        };
-        img.src = savedImage;
+  // În useEffect-ul de încărcare a stării salvate:
+useEffect(() => {
+  const loadSavedState = async () => {
+    const savedImage = sessionStorage.getItem(SESSION_KEY);
+    if (savedImage) {
+      const img = new Image();
+      img.onload = () => {
+        setImage(img);
+        const canvas = canvasRef.current;
+        if (canvas) {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+        }
+      };
+      img.src = savedImage;
+    }
+
+    const savedState = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (savedState) {
+      setFilters(savedState.filters || {});
+      setEdits(savedState.edits || {});
+      
+      // Restaurăm corect starea tools, inclusiv cropRect
+      const restoredTools = {
+        crop: savedState.tools?.crop || false,
+        aspectRatio: savedState.tools?.aspectRatio || 'original',
+        rotate: savedState.tools?.rotate || 0,
+        cropRect: savedState.tools?.cropRect || null
+      };
+      setTools(restoredTools);
+      
+      // Restaurăm cropRect doar dacă există
+      if (restoredTools.crop && restoredTools.cropRect) {
+        setCropRect(restoredTools.cropRect);
       }
-    
-      // Încărcăm restul stării din localStorage
-      const savedState = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (savedState) {
-        setFilters(savedState.filters || {
-          // ... (păstrează valorile default existente)
-        });
-        setTools(savedState.tools || {
-          // ... (păstrează valorile default existente)
-        });
-        setEdits(savedState.edits || {
-          // ... (păstrează valorile default existente)
-        });
-        setHistory(savedState.history || []);
-        setHistoryIndex(savedState.historyIndex || 0);
-      }
-    };
-  
-    loadSavedState();
-  }, []);
+
+      setHistory(savedState.history || []);
+      setHistoryIndex(savedState.historyIndex || 0);
+    }
+  };
+
+  loadSavedState();
+}, []);
 
 
   // Apply black and white filter
@@ -1038,18 +1052,18 @@ const getAspectRatio = (ratio, canvas) => {
       return null; // For custom
   }
 };
-const rotateImage = (direction) => {
+
+const rotateImage = async (direction) => {
   if (!image) return;
 
-  // Determinăm unghiul de rotire (90° sau -90°)
   const angle = direction === 'left' ? -90 : 90;
-  const newRotation = (tools.rotate + angle + 360) % 360; // Asigurăm între 0-359
+  const newRotation = (tools.rotate + angle + 360) % 360;
 
-  // Creăm un canvas temporar pentru rotire
+  // Creăm canvas temporar
   const tempCanvas = document.createElement('canvas');
   const tempCtx = tempCanvas.getContext('2d');
 
-  // Setăm dimensiunile - inversează pentru rotiri de 90° sau 270°
+  // Setăm dimensiunile corecte
   if (angle % 180 !== 0) {
     tempCanvas.width = image.height;
     tempCanvas.height = image.width;
@@ -1060,97 +1074,107 @@ const rotateImage = (direction) => {
 
   // Rotim imaginea
   tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
-  tempCtx.rotate(angle * Math.PI / 180);
+  tempCtx.rotate((angle * Math.PI) / 180);
   tempCtx.drawImage(image, -image.width / 2, -image.height / 2);
 
-  // Actualizăm imaginea principală
+  // Actualizăm starea
   const rotatedImg = new Image();
   rotatedImg.onload = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    // Actualizăm canvas-ul principal
+    canvas.width = rotatedImg.width;
+    canvas.height = rotatedImg.height;
+    ctx.drawImage(rotatedImg, 0, 0);
+
+    // Actualizăm starea
     setImage(rotatedImg);
     setTools(prev => ({ ...prev, rotate: newRotation }));
     
-    // Actualizăm canvas-ul principal
-    const canvas = canvasRef.current;
-    canvas.width = rotatedImg.width;
-    canvas.height = rotatedImg.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(rotatedImg, 0, 0);
+    // Salvăm starea curentă în istoric
+    addToHistory({
+      image: canvas.toDataURL('image/jpeg'),
+      filters: { ...filters },
+      tools: { ...tools, rotate: newRotation },
+      edits: { ...edits }
+    });
   };
   rotatedImg.src = tempCanvas.toDataURL('image/jpeg');
 };
 
 const applyCrop = () => {
   if (!image || !cropRect || !canvasRef.current) return;
-  
+
   const canvas = canvasRef.current;
-  const ctx = canvas.getContext('2d');
   const { x, y, width, height } = cropRect;
-  
-  // Create temp canvas with exact crop size
+
+  // Creăm canvas temporar
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = width;
   tempCanvas.height = height;
   const tempCtx = tempCanvas.getContext('2d');
-  
-  // Draw cropped portion
-  tempCtx.drawImage(
-    canvas,
-    x, y, width, height,
-    0, 0, width, height
-  );
-  
-  // Update main image
+  tempCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+
+  // Actualizăm starea
   const croppedImg = new Image();
   croppedImg.onload = () => {
     setImage(croppedImg);
     setCropRect(null);
-    setTools(prev => ({ 
-      ...prev, 
-      crop: false,
-      cropRect: null,
-      rotate: 0 // Reset rotation after crop
-    }));
     
-    // Update canvas
+    // Actualizăm canvas-ul principal
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(croppedImg, 0, 0);
-    
-    // Update history
-    const newHistory = [...history];
-    if (newHistory.length > 0 && historyIndex >= 0) {
-      newHistory[historyIndex] = {
-        ...newHistory[historyIndex],
-        image: canvas.toDataURL('image/jpeg'),
-        tools: {
-          ...tools,
-          crop: false,
-          cropRect: null,
-          rotate: 0
-        }
-      };
-      setHistory(newHistory);
-    }
+
+    // Salvăm în localStorage și sessionStorage
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    sessionStorage.setItem(SESSION_KEY, dataUrl);
+
+    // Adăugăm în istoric
+    addToHistory({
+      image: dataUrl,
+      filters: { ...filters },
+      tools: { 
+        ...tools, 
+        crop: false,
+        cropRect: null,
+        rotate: 0 
+      },
+      edits: { ...edits }
+    });
   };
   croppedImg.src = tempCanvas.toDataURL('image/jpeg');
 };
 
   // Handle filter toggle - now applies immediately
   const toggleFilter = (filterName) => {
-    setFilters(prev => {
-      const newFilters = { ...prev, [filterName]: !prev[filterName] };
-      return newFilters;
-    });
-  };
+  const newFilters = { ...filters, [filterName]: !filters[filterName] };
+  setFilters(newFilters);
+  
+  // Adăugăm în istoric după ce aplicăm modificarea
+  addToHistory({
+    image: canvasRef.current.toDataURL('image/jpeg'),
+    filters: newFilters,
+    tools: { ...tools },
+    edits: { ...edits }
+  });
+};
 
   // Handle edit change
   const handleEditChange = (editName, value) => {
-    setEdits(prev => ({
-      ...prev,
-      [editName]: parseInt(value)
-    }));
-  };
+  const newEdits = { ...edits, [editName]: parseInt(value) };
+  setEdits(newEdits);
+  
+  // Adăugăm în istoric
+  addToHistory({
+    image: canvasRef.current.toDataURL('image/jpeg'),
+    filters: { ...filters },
+    tools: { ...tools },
+    edits: newEdits
+  });
+};
 
   const drawCropOverlay = (ctx, rect) => {
     // Darken outside area
@@ -1204,142 +1228,132 @@ const applyCrop = () => {
 
   // Handle tool change
   const handleToolChange = (toolName, value) => {
-    const newTools = {
-      ...tools,
-      [toolName]: value
-    };
-  
-    if (toolName === 'crop') {
-      if (value && image) {
-        // Inițializează crop rectangle centrat, cu dimensiuni mai mici decât imaginea
-        const initialSize = Math.min(image.width, image.height) * 0.8;
-        newTools.cropRect = {
-          x: (image.width - initialSize) / 2,
-          y: (image.height - initialSize) / 2,
-          width: initialSize,
-          height: initialSize
-        };
-        setCropRect(newTools.cropRect);
-        
-        // Forțează redesenarea imediată
-        redrawCanvasWithCrop(newTools.cropRect);
+  const newTools = { ...tools, [toolName]: value };
+
+  if (toolName === 'crop' && value && image) {
+    // Calculăm dimensiunile inițiale în funcție de aspect ratio
+    let width, height;
+    const ratio = getAspectRatio(tools.aspectRatio, image);
+    
+    if (ratio) {
+      // Calculăm dimensiunile în funcție de aspect ratio
+      if (image.width / image.height > ratio) {
+        height = image.height * 0.8;
+        width = height * ratio;
       } else {
-        newTools.cropRect = null;
-        setCropRect(null);
-        if (image) {
-          const canvas = canvasRef.current;
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(image, 0, 0);
-          applyAllEffects(image);
-        }
+        width = image.width * 0.8;
+        height = width / ratio;
       }
+    } else {
+      // Custom ratio - pătrat
+      width = height = Math.min(image.width, image.height) * 0.8;
     }
-  
-    if (toolName === 'aspectRatio' && tools.crop && image) {
-      const ratio = getAspectRatio(value, image);
-      if (ratio) {
-        const currentRect = cropRect || {
-          x: 0,
-          y: 0,
-          width: image.width,
-          height: image.height
-        };
-        
-        // Păstrează centrul dar ajustează dimensiunile după raport
-        const centerX = currentRect.x + currentRect.width / 2;
-        const centerY = currentRect.y + currentRect.height / 2;
-        
-        let newWidth, newHeight;
-        if (ratio > (currentRect.width / currentRect.height)) {
-          newHeight = currentRect.height;
-          newWidth = newHeight * ratio;
-        } else {
-          newWidth = currentRect.width;
-          newHeight = newWidth / ratio;
-        }
-        
-        // Asigură-te că nu depășește marginile imaginii
-        newWidth = Math.min(newWidth, image.width);
-        newHeight = Math.min(newHeight, image.height);
-        
-        newTools.cropRect = {
-          x: Math.max(0, Math.min(centerX - newWidth / 2, image.width - newWidth)),
-          y: Math.max(0, Math.min(centerY - newHeight / 2, image.height - newHeight)),
-          width: newWidth,
-          height: newHeight
-        };
-        
-        setCropRect(newTools.cropRect);
-        redrawCanvasWithCrop(newTools.cropRect);
+
+    newTools.cropRect = {
+      x: (image.width - width) / 2,
+      y: (image.height - height) / 2,
+      width,
+      height
+    };
+    setCropRect(newTools.cropRect);
+  } else if (toolName === 'aspectRatio' && tools.crop && image) {
+    // Actualizăm crop rectangle când schimbăm aspect ratio
+    const ratio = getAspectRatio(value, image);
+    if (ratio && cropRect) {
+      const centerX = cropRect.x + cropRect.width / 2;
+      const centerY = cropRect.y + cropRect.height / 2;
+      
+      let newWidth, newHeight;
+      if (cropRect.width / cropRect.height > ratio) {
+        newHeight = cropRect.height;
+        newWidth = newHeight * ratio;
+      } else {
+        newWidth = cropRect.width;
+        newHeight = newWidth / ratio;
       }
+
+      setCropRect({
+        x: centerX - newWidth / 2,
+        y: centerY - newHeight / 2,
+        width: newWidth,
+        height: newHeight
+      });
     }
-  
-    setTools(newTools);
-  };
+  }
+
+  setTools(newTools);
+};
 
   // Reset all edits
   const resetEdits = () => {
-    setFilters({
-      blackWhite: false,
-      noise: false,
-      sharpen: false,
-      sepia: false,
-      vintage: false,
-      invert: false,
-      gotham: false,
-      lofi: false,
-      pastel: false,
-      hudson: false,
-      amaro: false,
-      xpro: false,
-      sierra: false,
-      valencia: false,
-      moon: false,
-      robeautify: false
-    });
-    setEdits({
-      exposure: 0,
-      contrast: 0,
-      saturation: 0,
-      temperature: 0
-    });
-    setTools({
-      crop: false,
-      aspectRatio: 'original',
-      rotate: 0,
-      cropRect: null
-    });
+  if (!image || !canvasRef.current) return;
 
+  // Reîncărcăm imaginea originală din sessionStorage
+  const savedImage = sessionStorage.getItem(SESSION_KEY);
+  if (!savedImage) return;
+
+  const originalImg = new Image();
+  originalImg.onload = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    // Resetăm canvas-ul
+    canvas.width = originalImg.width;
+    canvas.height = originalImg.height;
+    ctx.drawImage(originalImg, 0, 0);
+
+    // Definim starea resetată
+    const resetState = {
+      image: canvas.toDataURL('image/jpeg'),
+      filters: {
+        blackWhite: false,
+        noise: false,
+        sharpen: false,
+        sepia: false,
+        vintage: false,
+        invert: false,
+        gotham: false,
+        lofi: false,
+        pastel: false,
+        hudson: false,
+        amaro: false,
+        xpro: false,
+        sierra: false,
+        valencia: false,
+        moon: false,
+        robeautify: false
+      },
+      edits: {
+        exposure: 0,
+        contrast: 0,
+        saturation: 0,
+        temperature: 0
+      },
+      tools: {
+        crop: false,
+        aspectRatio: 'original',
+        rotate: 0,
+        cropRect: null
+      }
+    };
+
+    // Actualizăm toate stările
+    setImage(originalImg);
+    setProcessedImage(originalImg);
+    setFilters(resetState.filters);
+    setEdits(resetState.edits);
+    setTools(resetState.tools);
     setIsCropping(false);
     setCropStart(null);
     setCropRect(null);
     setCropResizeHandle(null);
-    
-    // Reset to original image
-    if (history.length > 0) {
-      const originalState = history[0];
-      const img = new Image();
-      img.onload = () => {
-        setImage(img);
-        
-        const canvas = canvasRef.current;
-        if (canvas) {
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-        }
-      };
-      img.src = originalState.image;
-      
-      setHistory([originalState]);
-      setHistoryIndex(0);
-    }
-    
-    // Clear the saved state
-    localStorage.removeItem(STORAGE_KEY);
+
+    // Resetăm istoricul
+    setHistory([resetState]);
+    setHistoryIndex(0);
   };
+  originalImg.src = savedImage;
+};
 
   const handleExit = () => {
     setShowExitConfirm(true);
@@ -1438,61 +1452,99 @@ useEffect(() => {
 
   // Undo function
   const undo = () => {
-    if (historyIndex <= 0) return;
-    
-    const prevIndex = historyIndex - 1;
-    const prevState = history[prevIndex];
-    
-    // Actualizează starea fără a declanșa efecte
-    setFilters(prevState.filters);
-    setTools(prevState.tools);
-    setEdits(prevState.edits);
-    
-    // Actualizează canvas-ul direct
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        setProcessedImage(img); // Adaugă această linie
-      };
-      img.src = prevState.image;
-    }
-    
-    setHistoryIndex(prevIndex);
-  };
+  if (historyIndex <= 0) return;
+  
+  const prevIndex = historyIndex - 1;
+  const prevState = history[prevIndex];
+  
+  // Actualizăm toate stările într-un singur batch
+  setFilters(prevState.filters);
+  setTools(prevState.tools);
+  setEdits(prevState.edits);
+  setHistoryIndex(prevIndex);
+  
+  // Restaurăm imaginea sincron
+  const canvas = canvasRef.current;
+  if (canvas && prevState.image) {
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      setImage(img); // Actualizăm starea imaginii
+      setProcessedImage(img); // Asigurăm sincronizarea
+    };
+    img.src = prevState.image;
+  }
+};
   
   // Redo function
   const redo = () => {
-    if (historyIndex >= history.length - 1) return;
-    
-    const nextIndex = historyIndex + 1;
-    const nextState = history[nextIndex];
-    
-    // Actualizează starea fără a declanșa efecte
-    setFilters(nextState.filters);
-    setTools(nextState.tools);
-    setEdits(nextState.edits);
-    
-    // Actualizează canvas-ul direct
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        setProcessedImage(img); // Adaugă această linie
-      };
-      img.src = nextState.image;
+  if (historyIndex >= history.length - 1) return;
+  
+  const nextIndex = historyIndex + 1;
+  const nextState = history[nextIndex];
+  
+  // Actualizăm toate stările într-un singur batch
+  setFilters(nextState.filters);
+  setTools(nextState.tools);
+  setEdits(nextState.edits);
+  setHistoryIndex(nextIndex);
+  
+  // Restaurăm imaginea sincron
+  const canvas = canvasRef.current;
+  if (canvas && nextState.image) {
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      setImage(img); // Actualizăm starea imaginii
+      setProcessedImage(img); // Asigurăm sincronizarea
+    };
+    img.src = nextState.image;
+  }
+};
+
+useEffect(() => {
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      undo();
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      e.preventDefault();
+      redo();
     }
-    
-    setHistoryIndex(nextIndex);
   };
+
+  window.addEventListener('keydown', handleKeyDown);
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+  };
+}, [history, historyIndex]); // Adăugăm dependințele necesare
+
+//Debugging history updates
+useEffect(() => {
+  console.log('History updated:', {
+    history,
+    historyIndex,
+    canUndo: historyIndex > 0,
+    canRedo: historyIndex < history.length - 1
+  });
+}, [history, historyIndex]);
+
+// Debugging state changes
+useEffect(() => {
+  console.log('Current state:', {
+    image: image ? `${image.width}x${image.height}` : null,
+    tools,
+    cropRect,
+    historyIndex,
+    historyLength: history.length
+  });
+}, [image, tools, cropRect, historyIndex, history]);
 
   // Save edited image
   const saveImage = async () => {
@@ -1644,12 +1696,21 @@ useEffect(() => {
             </LeftGroup>
 
 <CenterGroup>
-<ToolButton onClick={undo} disabled={historyIndex <= 0}>
-      <FaUndo /> Undo
-    </ToolButton>
-    <ToolButton onClick={redo} disabled={historyIndex >= history.length - 1}>
-      <FaRedo /> Redo
-    </ToolButton>
+<ToolButton 
+  onClick={undo} 
+  disabled={historyIndex <= 0}
+  title="Undo (Ctrl+Z)"
+>
+  <FaUndo /> Undo
+</ToolButton>
+
+<ToolButton 
+  onClick={redo} 
+  disabled={historyIndex >= history.length - 1}
+  title="Redo (Ctrl+Y)"
+>
+  <FaRedo /> Redo
+</ToolButton>
   </CenterGroup>
 
   <RightGroup>
