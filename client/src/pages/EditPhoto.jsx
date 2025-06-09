@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import styled from 'styled-components';
 import '../assets/styles/edit-photo.css';
 import {FaTrash, FaPaintBrush, FaHeadphones, FaInbox, FaHistory, FaTree, FaSnowflake, FaStar, FaWaveSquare, FaAdjust, FaMountain, FaHeart, FaBolt, FaUmbrellaBeach, FaRegMoon, FaFire } from "react-icons/fa";
-
+import SaveModal from '../components/SaveModal';
 
 const STORAGE_KEY = 'robeautify_editor_state';
 const SESSION_KEY = 'robeautify_current_image'; // Key for session storage
@@ -71,6 +71,9 @@ const EditPhoto = () => {
     saturation: 0,
     temperature: 0
   });
+  const [showSaveModal, setShowSaveModal] = useState(false);
+const [fileName, setFileName] = useState('robeautify-edit');
+const [fileType, setFileType] = useState('jpg');
 
   // Funcție helper pentru a adăuga o nouă stare în istoric
 const addToHistory = (currentState) => {
@@ -1547,24 +1550,51 @@ useEffect(() => {
 }, [image, tools, cropRect, historyIndex, history]);
 
   // Save edited image
-  const saveImage = async () => {
-    if (!processedImage || !canvasRef.current) return;
+  const saveImage = async (action) => {
+  if (!processedImage || !canvasRef.current) return;
+  
+  setIsProcessing(true);
+  
+  try {
+    const canvas = canvasRef.current;
+    let mimeType, extension;
     
-    const fileName = prompt('Enter a name for your image:', 'edited-photo');
-    if (!fileName) return; // User cancelled
+    switch (fileType) {
+      case 'png':
+        mimeType = 'image/png';
+        extension = 'png';
+        break;
+      case 'webp':
+        mimeType = 'image/webp';
+        extension = 'webp';
+        break;
+      case 'jpg':
+      default:
+        mimeType = 'image/jpeg';
+        extension = 'jpg';
+    }
     
-    try {
-      const canvas = canvasRef.current;
-      const dataUrl = canvas.toDataURL('image/jpeg');
-      
+    const dataUrl = canvas.toDataURL(mimeType);
+    
+    if (action === 'download' || action === 'saveAndDownload') {
+      // Create download link
+      const link = document.createElement('a');
+      link.download = `${fileName}.${extension}`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    if ((action === 'save' || action === 'saveAndDownload') && currentUser) {
       // Convert data URL to blob
       const response = await fetch(dataUrl);
       const blob = await response.blob();
       
       // Create form data to send to server
       const formData = new FormData();
-      formData.append('photo', blob, `${fileName}.jpg`);
-      formData.append('userId', currentUser?.id || 'anonymous');
+      formData.append('photo', blob, `${fileName}.${extension}`);
+      formData.append('userId', currentUser.id);
       formData.append('metadata', JSON.stringify({
         filters,
         tools,
@@ -1588,11 +1618,15 @@ useEffect(() => {
       }
       
       alert('Photo saved successfully to your gallery!');
-    } catch (error) {
-      console.error('Error saving photo:', error);
-      alert('Failed to save photo: ' + error.message);
     }
-  };
+  } catch (error) {
+    console.error('Error saving photo:', error);
+    alert('Failed to save photo: ' + error.message);
+  } finally {
+    setIsProcessing(false);
+    setShowSaveModal(false);
+  }
+};
 
   return (
     <EditContainer>
@@ -1717,9 +1751,9 @@ useEffect(() => {
     <ToolButton onClick={resetEdits}>
       <FaTrash /> Reset All
     </ToolButton>
-    <SaveButton onClick={saveImage} disabled={!processedImage || isProcessing}>
-      {isProcessing ? 'Processing...' : 'Save'}
-    </SaveButton>
+    <ToolButton onClick={() => setShowSaveModal(true)} disabled={!processedImage || isProcessing}>
+  {isProcessing ? 'Processing...' : 'Save'}
+</ToolButton>
     <ToolButton onClick={handleExit}>
       <FaTimes /> Exit
     </ToolButton>
@@ -1932,11 +1966,23 @@ useEffect(() => {
     </Modal>
   </ModalOverlay>
 )}
+<SaveModal
+  isOpen={showSaveModal}
+  onClose={() => setShowSaveModal(false)}
+  onDownload={() => saveImage('download')}
+  onSave={() => saveImage('save')}
+  onSaveAndDownload={() => saveImage('saveAndDownload')}
+  isLoggedIn={!!currentUser}
+  fileName={fileName}
+  onFileNameChange={setFileName}
+  fileType={fileType}
+  onFileTypeChange={setFileType}
+/>
     </EditContainer>
   );
 };
 
-// Styled components
+// Styled components...
 const EditContainer = styled.div`
   display: flex;
   flex-direction: column;

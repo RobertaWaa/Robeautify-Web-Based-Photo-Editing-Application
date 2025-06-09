@@ -7,7 +7,9 @@ import mysql from "mysql2/promise";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import path from "path";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
 
 const PORT = process.env.PORT || 5000;
 
@@ -42,8 +44,8 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "profile-" + uniqueSuffix + path.extname(file.originalname));
-  },
+    cb(null, "edit-" + uniqueSuffix + path.extname(file.originalname)); // Schimbă "profile-" în "edit-"
+  }
 });
 
 const upload = multer({
@@ -58,6 +60,9 @@ const upload = multer({
   },
 });
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // Middleware
 app.use(
   cors({
@@ -67,7 +72,9 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
+app.use('/uploads', express.static('uploads'));
 app.use(bodyParser.json());
+
 
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -762,28 +769,30 @@ const createProjectsTable = async () => {
 
 createProjectsTable();
 
+
 // GET user photos endpoint
+// GET user photos endpoint - actualizat
 app.get("/api/user-photos", async (req, res) => {
   try {
     const userId = req.query.userId;
 
     if (!userId) {
-      return res
-        .status(400)
-        .json({ success: false, error: "User ID required" });
+      return res.status(400).json({ success: false, error: "User ID required" });
     }
 
+    // Folosim user_projects în loc de user_photos
     const [photos] = await pool.query(
-      "SELECT id, filename FROM user_photos WHERE user_id = ? ORDER BY created_at DESC",
+      "SELECT id, filename, created_at as createdAt FROM user_projects WHERE user_id = ? ORDER BY created_at DESC",
       [userId]
     );
 
     res.json({
       success: true,
-      photos: photos.map((photo) => ({
+      photos: photos.map(photo => ({
         id: photo.id,
         filename: photo.filename,
         url: `/uploads/${photo.filename}`,
+        createdAt: photo.createdAt
       })),
     });
   } catch (error) {
@@ -793,36 +802,7 @@ app.get("/api/user-photos", async (req, res) => {
 });
 
 // Save photo endpoint
-app.post("/api/save-photo", upload.single("photo"), async (req, res) => {
-  try {
-    const { userId, metadata } = req.body;
-
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Photo file required" });
-    }
-
-    const [result] = await pool.query(
-      "INSERT INTO user_photos (user_id, filename) VALUES (?, ?)",
-      [userId, req.file.filename]
-    );
-
-    res.json({
-      success: true,
-      photo: {
-        id: result.insertId,
-        filename: req.file.filename,
-        url: `/uploads/${req.file.filename}`,
-      },
-    });
-  } catch (error) {
-    console.error("Error saving photo:", error);
-    res.status(500).json({ success: false, error: "Failed to save photo" });
-  }
-});
-
-// Endpoint to save edited photo
+// Enhanced save photo endpoint that handles both saving to gallery and metadata
 app.post("/api/save-photo", upload.single("photo"), async (req, res) => {
   try {
     const { userId, metadata } = req.body;
@@ -834,7 +814,7 @@ app.post("/api/save-photo", upload.single("photo"), async (req, res) => {
       });
     }
 
-    // Save to database
+    // Save to database - using user_projects table which includes metadata
     const [result] = await pool.query(
       "INSERT INTO user_projects (user_id, filename, metadata) VALUES (?, ?, ?)",
       [userId, req.file.filename, metadata]
@@ -858,9 +838,21 @@ app.post("/api/save-photo", upload.single("photo"), async (req, res) => {
   }
 });
 
+// Endpoint to get all debug files in the uploads directory
+app.get("/api/debug-files", async (req, res) => {
+  const fs = require('fs');
+  try {
+    const files = fs.readdirSync('./uploads');
+    res.json({ success: true, files });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Start server
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Test endpoint: http://localhost:${PORT}`);
 });
+

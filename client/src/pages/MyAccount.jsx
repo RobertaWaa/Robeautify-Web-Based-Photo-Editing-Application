@@ -31,6 +31,8 @@ function MyAccount() {
   const [editedPhotos, setEditedPhotos] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loadingPhotos, setLoadingPhotos] = useState(true);
+const [imageLoaded, setImageLoaded] = useState(false);
 
   // Password validation checks
   const passwordChecks = {
@@ -59,33 +61,36 @@ function MyAccount() {
     });
 
     // Fetch user's edited photos
-    const fetchEditedPhotos = async () => {
-      try {
-        const response = await fetch(
-          `http://localhost:5000/api/user-photos?userId=${currentUser.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.success) {
-          setEditedPhotos(data.photos);
-        } else {
-          setError(data.error || "Failed to load photos");
-        }
-      } catch (error) {
-        console.error("Error fetching photos:", error);
-        setError("Failed to load your photo gallery. Please try again later.");
+    // MyAccount.jsx - Actualizează partea de fetch
+const fetchEditedPhotos = async () => {
+  try {
+    setLoadingPhotos(true);
+    const response = await fetch(
+      `http://localhost:5000/api/user-photos?userId=${currentUser.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       }
-    };
+    );
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const data = await response.json();
+    console.log("Photos data from API:", data); // Debugging
+
+    if (data.success && data.photos) {
+      setEditedPhotos(data.photos);
+    } else {
+      setError(data.error || "Failed to load photos");
+    }
+  } catch (error) {
+    console.error("Error fetching photos:", error);
+    setError("Failed to load your photo gallery. Please try again later.");
+  } finally {
+    setLoadingPhotos(false);
+  }
+};
 
     fetchEditedPhotos();
   }, [currentUser?.id]);
@@ -213,6 +218,8 @@ function MyAccount() {
   const toggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
+
+  console.log("Edited photos state:", editedPhotos);
 
   if (!currentUser) return null;
 
@@ -433,30 +440,48 @@ function MyAccount() {
         </DetailsSection>
 
         <GallerySection>
-          <GalleryHeader>Your Photo Gallery</GalleryHeader>
-          {editedPhotos.length > 0 ? (
-            <GalleryGrid>
-              {editedPhotos.map((photo, index) => (
-                <GalleryItem key={index}>
-                  <img
-                    src={`/uploads/${photo.filename}`}
-                    alt={`Edited ${index + 1}`}
-                  />
-                </GalleryItem>
-              ))}
-            </GalleryGrid>
-          ) : (
-            <EmptyGallery>
-              <FaImage />
-              <p>You haven't edited any photos yet</p>
-              <Link to="/edit-photo">Start editing now</Link>
-            </EmptyGallery>
-          )}
-        </GallerySection>
+  <GalleryHeader>Your Photo Gallery</GalleryHeader>
+  {loadingPhotos ? (
+  <LoadingMessage>Loading your photos...</LoadingMessage>
+) : editedPhotos.length > 0 ? (
+  // MyAccount.jsx - Partea de render
+<GalleryGrid>
+  {editedPhotos.map((photo) => (
+    <GalleryItem key={photo.id}>
+      <img
+  src={`http://localhost:5000/uploads/${photo.filename}`}
+  onError={(e) => {
+    e.target.onerror = null;
+    e.target.src = '/placeholder-image.jpg';
+  }}
+/>
+      <PhotoOverlay>
+        <PhotoDate>
+          {new Date(photo.createdAt).toLocaleDateString()}
+        </PhotoDate>
+      </PhotoOverlay>
+    </GalleryItem>
+  ))}
+</GalleryGrid>
+) : (
+  <EmptyGallery>
+    <FaImage />
+    <p>You haven't edited any photos yet</p>
+    <Link to="/edit-photo">Start editing now</Link>
+  </EmptyGallery>
+)}
+</GallerySection>
       </AccountContent>
     </AccountContainer>
   );
 }
+
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 1.1rem;
+`;
 
 const DetailsSection = styled.div`
   background: white;
@@ -819,6 +844,22 @@ const EmptyGallery = styled.div`
       text-decoration: underline;
     }
   }
+`;
+
+const PhotoOverlay = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  color: white;
+  font-size: 0.8rem;
+`;
+
+const PhotoDate = styled.span`
+  display: block;
+  text-align: center;
 `;
 
 export default MyAccount;
