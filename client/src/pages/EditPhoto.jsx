@@ -30,6 +30,12 @@ import {
   FaFire,
 } from "react-icons/fa";
 import SaveModal from "../components/SaveModal";
+const breakpoints = {
+  small: "576px",
+  medium: "768px",
+  large: "992px",
+  xlarge: "1200px",
+};
 
 const STORAGE_KEY = "robeautify_editor_state";
 const SESSION_KEY = "robeautify_current_image";
@@ -2104,6 +2110,11 @@ const EditContainer = styled.div`
   min-height: 100vh;
   background-color: #f8f9fa;
   position: relative;
+  padding: 10px;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 5px;
+  }
 `;
 
 const EditorWrapper = styled.div`
@@ -2116,6 +2127,11 @@ const EditorWrapper = styled.div`
   width: 100%;
   min-height: calc(100vh - 160px);
   box-sizing: border-box;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 10px;
+    min-height: calc(100vh - 120px);
+  }
 `;
 
 const Toolbar = styled.div`
@@ -2127,18 +2143,34 @@ const Toolbar = styled.div`
   padding: 10px 20px;
   margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: ${breakpoints.medium}) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
 `;
 
 const LeftGroup = styled.div`
   display: flex;
   gap: 10px;
   justify-self: start;
+
+  @media (max-width: ${breakpoints.medium}) {
+    justify-self: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 `;
 
 const CenterGroup = styled.div`
   display: flex;
   gap: 10px;
   justify-self: center;
+
+  @media (max-width: ${breakpoints.medium}) {
+    justify-self: center;
+  }
 `;
 
 const RightGroup = styled.div`
@@ -2146,22 +2178,11 @@ const RightGroup = styled.div`
   gap: 10px;
   justify-self: end;
   align-items: center;
-`;
 
-const ToolbarGroup = styled.div`
-  display: flex;
-  gap: 10px;
-  align-items: center;
-
-  &:nth-child(2) {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  &:last-child {
-    margin-left: auto;
-    margin-right: 20px;
+  @media (max-width: ${breakpoints.medium}) {
+    justify-self: center;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 `;
 
@@ -2176,31 +2197,18 @@ const ToolButton = styled.button`
   border-radius: 4px;
   cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
   transition: all 0.2s;
+  font-size: 14px;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
 
   &:hover {
     background-color: ${(props) =>
       props.disabled ? "white" : props.$active ? "#ff4081" : "#f5f5f5"};
     border-color: ${(props) =>
       props.disabled ? "#ddd" : props.$active ? "#ff4081" : "#ccc"};
-  }
-`;
-
-const SaveButton = styled.button`
-  padding: 8px 24px;
-  background-color: #ff69b4;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background-color: #ff4081;
-  }
-
-  &:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
   }
 `;
 
@@ -2213,6 +2221,11 @@ const SubMenu = styled.div`
   position: sticky;
   top: 0;
   z-index: 10;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 10px;
+    position: static;
+  }
 `;
 
 const FilterOptions = styled.div`
@@ -2220,6 +2233,14 @@ const FilterOptions = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
   width: 100%;
+
+  @media (max-width: ${breakpoints.medium}) {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+
+  @media (max-width: ${breakpoints.small}) {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
 
   svg {
     width: 16px;
@@ -2238,6 +2259,12 @@ const FilterOption = styled.button`
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 14px;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
 
   svg {
     font-size: 14px;
@@ -2255,30 +2282,16 @@ const FilterOption = styled.button`
   }
 `;
 
-const CropOverlayInstructions = styled.div`
-  grid-column: 1 / -1;
-  font-size: 0.9em;
-  color: #666;
-  margin-top: -10px;
-  margin-bottom: 10px;
-
-  p {
-    margin: 5px 0;
-  }
-`;
-
-const RotateSliderContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-`;
-
 const RotateButtons = styled.div`
   display: flex;
   justify-content: center;
   gap: 10px;
   width: 100%;
+
+  @media (max-width: ${breakpoints.medium}) {
+    flex-direction: column;
+    gap: 8px;
+  }
 `;
 
 const RotateButton = styled.button`
@@ -2292,23 +2305,16 @@ const RotateButton = styled.button`
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 14px;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 6px 12px;
+    font-size: 13px;
+    justify-content: center;
+  }
 
   &:hover {
     background-color: #ff4081;
-  }
-`;
-
-const ResetButton = styled.button`
-  flex: 1;
-  padding: 6px 10px;
-  background-color: #ddd;
-  color: #333;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #ccc;
   }
 `;
 
@@ -2321,6 +2327,12 @@ const ApplyButton = styled.button`
   cursor: pointer;
   margin-top: 10px;
   width: 100%;
+  font-size: 14px;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
 
   &:hover {
     background-color: #ff4081;
@@ -2332,24 +2344,44 @@ const ToolOptions = styled.div`
   flex-direction: column;
   gap: 15px;
   width: 100%;
+
+  @media (max-width: ${breakpoints.medium}) {
+    gap: 10px;
+  }
 `;
 
 const ToolOption = styled.div`
   display: flex;
   align-items: center;
   gap: 15px;
+  flex-wrap: wrap;
+
+  @media (max-width: ${breakpoints.medium}) {
+    gap: 10px;
+  }
 
   label {
     min-width: 100px;
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 14px;
+
+    @media (max-width: ${breakpoints.medium}) {
+      min-width: 80px;
+      font-size: 13px;
+    }
   }
 
   select,
   input[type="range"] {
     flex: 1;
     accent-color: #ff9a9e;
+    min-width: 150px;
+
+    @media (max-width: ${breakpoints.medium}) {
+      min-width: 120px;
+    }
   }
 
   input[type="checkbox"] {
@@ -2366,6 +2398,12 @@ const ToolOption = styled.div`
     padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 14px;
+
+    @media (max-width: ${breakpoints.medium}) {
+      padding: 4px 8px;
+      font-size: 13px;
+    }
 
     &:hover {
       background-color: #ff7b81;
@@ -2378,6 +2416,10 @@ const EditOptions = styled.div`
   flex-direction: column;
   gap: 15px;
   width: 100%;
+
+  @media (max-width: ${breakpoints.medium}) {
+    gap: 10px;
+  }
 `;
 
 const EditSlider = styled.div`
@@ -2386,9 +2428,19 @@ const EditSlider = styled.div`
   align-items: center;
   gap: 15px;
 
+  @media (max-width: ${breakpoints.medium}) {
+    grid-template-columns: 100px 40px 1fr;
+    gap: 10px;
+  }
+
   label {
     text-align: right;
     grid-column: 1;
+    font-size: 14px;
+
+    @media (max-width: ${breakpoints.medium}) {
+      font-size: 13px;
+    }
   }
 
   span {
@@ -2396,6 +2448,11 @@ const EditSlider = styled.div`
     text-align: center;
     min-width: 30px;
     display: inline-block;
+    font-size: 14px;
+
+    @media (max-width: ${breakpoints.medium}) {
+      font-size: 13px;
+    }
   }
 
   input[type="range"] {
@@ -2425,6 +2482,11 @@ const CanvasContainer = styled.div`
   margin-bottom: 20px;
   max-height: calc(100vh - 300px);
   width: 100%;
+
+  @media (max-width: ${breakpoints.medium}) {
+    max-height: calc(100vh - 250px);
+    margin-bottom: 15px;
+  }
 `;
 
 const UploadArea = styled.div`
@@ -2434,6 +2496,10 @@ const UploadArea = styled.div`
   justify-content: center;
   padding: 40px;
   text-align: center;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 20px;
+  }
 `;
 
 const UploadPrompt = styled.div`
@@ -2443,8 +2509,17 @@ const UploadPrompt = styled.div`
   gap: 15px;
   color: #666;
 
+  @media (max-width: ${breakpoints.medium}) {
+    gap: 10px;
+  }
+
   p {
     margin: 0;
+    font-size: 16px;
+
+    @media (max-width: ${breakpoints.medium}) {
+      font-size: 14px;
+    }
   }
 `;
 
@@ -2456,6 +2531,12 @@ const UploadButton = styled.button`
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
+  font-size: 16px;
+
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
 
   &:hover {
     background-color: #ff4081;
@@ -2471,11 +2552,19 @@ const CanvasWrapper = styled.div`
   height: 100%;
   overflow: auto;
 
+  @media (max-width: ${breakpoints.medium}) {
+    padding: 10px;
+  }
+
   canvas {
     max-width: 100%;
     max-height: 80vh;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     object-fit: contain;
+
+    @media (max-width: ${breakpoints.medium}) {
+      max-height: 70vh;
+    }
   }
 `;
 
