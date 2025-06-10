@@ -171,35 +171,6 @@ function AuthPage({ type }) {
     setShowConfirmPassword(!showConfirmPassword);
   };
 
-  const checkUsernameAvailability = async (username) => {
-    if (!username || username.length < 3) return;
-
-    try {
-      const response = await fetch(
-        `http://localhost:5000/api/check-username?username=${encodeURIComponent(
-          username
-        )}`
-      );
-      const data = await response.json();
-
-      if (!data.available) {
-        setErrors((prev) => ({
-          ...prev,
-          username:
-            "This username is already taken. Please choose another one.",
-        }));
-      } else if (errors.username && data.available) {
-        setErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors.username;
-          return newErrors;
-        });
-      }
-    } catch (error) {
-      console.error("Availability check error:", error);
-    }
-  };
-
   return (
     <AuthContainer>
       <AuthCard>

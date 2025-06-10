@@ -2,6 +2,18 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
+const NotFound = () => {
+  return (
+    <NotFoundContainer>
+      <Title>404 - Page Not Found</Title>
+      <Subtitle>
+        Oops! The page you're looking for doesn't exist or has been moved.
+      </Subtitle>
+      <HomeButton to="/">Go Back to Home</HomeButton>
+    </NotFoundContainer>
+  );
+};
+
 const NotFoundContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -38,17 +50,5 @@ const HomeButton = styled(Link)`
     transform: translateY(-2px);
   }
 `;
-
-const NotFound = () => {
-  return (
-    <NotFoundContainer>
-      <Title>404 - Page Not Found</Title>
-      <Subtitle>
-        Oops! The page you're looking for doesn't exist or has been moved.
-      </Subtitle>
-      <HomeButton to="/">Go Back to Home</HomeButton>
-    </NotFoundContainer>
-  );
-};
 
 export default NotFound;
