@@ -7,9 +7,10 @@ import mysql from "mysql2/promise";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import path from 'path';
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import path from "path";
+import fs from "fs/promises";
 
 const PORT = process.env.PORT || 5000;
 
@@ -17,7 +18,6 @@ dotenv.config();
 
 const app = express();
 
-// Add these before your routes
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
@@ -37,15 +37,14 @@ const pool = mysql.createPool({
 // JWT secret
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "edit-" + uniqueSuffix + path.extname(file.originalname)); // Schimbă "profile-" în "edit-"
-  }
+    cb(null, "edit-" + uniqueSuffix + path.extname(file.originalname));
+  },
 });
 
 const upload = multer({
@@ -63,7 +62,6 @@ const upload = multer({
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Middleware
 app.use(
   cors({
     origin: "http://localhost:3000",
@@ -72,11 +70,9 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
-app.use('/uploads', express.static('uploads'));
+app.use("/uploads", express.static("uploads"));
 app.use(bodyParser.json());
 
-
-// Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: "Gmail",
   auth: {
@@ -167,7 +163,7 @@ app.post("/api/verify-email", async (req, res) => {
       });
     }
 
-    // Get updated user data (doar câmpurile existente)
+    // Get updated user data
     const [users] = await pool.query(
       "SELECT id, email, full_name as fullName, email_verified as emailVerified FROM users WHERE id = ?",
       [decoded.userId]
@@ -192,7 +188,6 @@ app.post("/api/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Verifică dacă emailul există
     const [existingEmail] = await pool.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
@@ -233,7 +228,7 @@ app.post("/api/signup", async (req, res) => {
       result.insertId,
     ]);
 
-    // Trimite email de verificare
+    // Send verification email
     const verificationLink = `http://localhost:3000/verify-email?token=${verificationToken}`;
 
     const mailOptions = {
@@ -338,15 +333,15 @@ app.post("/api/resend-verification", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
-    const { email, password } = req.body; // Make sure this says 'email' not 'emailOrUsername'
+    const { email, password } = req.body;
 
-    console.log("Received login request:", req.body); // Add this for debugging
+    console.log("Received login request:", req.body);
 
     if (!email || !password) {
-      console.log("Missing fields - email:", email, "password:", password); // Debug log
+      console.log("Missing fields - email:", email, "password:", password);
       return res.status(400).json({
         success: false,
-        error: "Email and password are required", // Update this message
+        error: "Email and password are required",
       });
     }
 
@@ -410,7 +405,7 @@ app.post("/api/verify-token", async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     const [users] = await pool.query(
-      "SELECT id, email, full_name as fullName, email_verified as emailVerified FROM users WHERE id = ?",
+      "SELECT id, email, full_name as fullName, email_verified as emailVerified, created_at as createdAt FROM users WHERE id = ?",
       [decoded.userId]
     );
 
@@ -441,6 +436,7 @@ app.post("/api/google-auth", async (req, res) => {
     const payload = ticket.getPayload();
 
     // Debugging - afișează datele primite de la Google
+    /*
     console.log("Google Payload:", {
       email: payload.email,
       name: payload.name,
@@ -449,8 +445,8 @@ app.post("/api/google-auth", async (req, res) => {
     const googleId = payload.sub;
     const email = payload.email;
     const name = payload.name || payload.given_name;
+    */
 
-    // Verifică dacă utilizatorul există sau creează-l
     const [existingUser] = await pool.query(
       "SELECT * FROM users WHERE email = ?",
       [payload.email]
@@ -458,14 +454,12 @@ app.post("/api/google-auth", async (req, res) => {
 
     let user;
     if (existingUser.length > 0) {
-      // Actualizăm datele dacă Google le-a modificat
       await pool.query(
         "UPDATE users SET full_name = ?, profile_pic = ? WHERE id = ?",
         [name, payload.picture, existingUser[0].id]
       );
       user = existingUser[0];
     } else {
-      // Creăm cont nou
       const [result] = await pool.query(
         "INSERT INTO users (full_name, email, google_id, profile_pic, email_verified) VALUES (?, ?, ?, ?, TRUE)",
         [name, email, googleId, payload.picture]
@@ -477,7 +471,7 @@ app.post("/api/google-auth", async (req, res) => {
       user = newUser[0];
     }
 
-    // Generăm token JWT
+    // Generate JWT token
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
@@ -727,27 +721,71 @@ app.get("/api/check-username", async (req, res) => {
   }
 });
 
-// Add this to your server.js file
-
-// Create table for user photos if it doesn't exist
-const createPhotosTable = async () => {
+app.get("/api/user-data", async (req, res) => {
   try {
-    await pool.query(`
-          CREATE TABLE IF NOT EXISTS user_photos (
-              id INT AUTO_INCREMENT PRIMARY KEY,
-              user_id INT NOT NULL,
-              filename VARCHAR(255) NOT NULL,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-          )
-      `);
-    console.log("User photos table created or already exists");
-  } catch (error) {
-    console.error("Error creating user_photos table:", error);
-  }
-};
+    const authHeader = req.headers["authorization"];
+    if (!authHeader) return res.status(401).json({ success: false });
 
-createPhotosTable();
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const [users] = await pool.query(
+      "SELECT id, email, full_name as fullName, created_at as createdAt FROM users WHERE id = ?",
+      [decoded.userId]
+    );
+
+    if (users.length === 0) return res.status(404).json({ success: false });
+
+    res.json({
+      success: true,
+      user: users[0],
+    });
+  } catch (error) {
+    res.status(500).json({ success: false });
+  }
+});
+
+app.delete("/api/delete-photo/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const authHeader = req.headers["authorization"];
+
+    if (!authHeader) return res.status(401).json({ success: false });
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const [photo] = await pool.query(
+      "SELECT filename FROM user_projects WHERE id = ? AND user_id = ?",
+      [id, decoded.userId]
+    );
+
+    if (photo.length === 0) {
+      return res.status(404).json({ success: false, error: "Photo not found" });
+    }
+
+    const filename = photo[0].filename;
+
+    await pool.query("DELETE FROM user_projects WHERE id = ?", [id]);
+
+    try {
+      const filePath = path.join(__dirname, "uploads", filename);
+      await fs.unlink(filePath);
+      res.json({ success: true, message: "Photo deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting file:", err);
+
+      if (err.code === "ENOENT") {
+        res.json({ success: true, message: "Photo record deleted" });
+      } else {
+        throw err;
+      }
+    }
+  } catch (error) {
+    console.error("Delete photo error:", error);
+    res.status(500).json({ success: false, error: "Failed to delete photo" });
+  }
+});
 
 const createProjectsTable = async () => {
   try {
@@ -769,18 +807,16 @@ const createProjectsTable = async () => {
 
 createProjectsTable();
 
-
-// GET user photos endpoint
-// GET user photos endpoint - actualizat
 app.get("/api/user-photos", async (req, res) => {
   try {
     const userId = req.query.userId;
 
     if (!userId) {
-      return res.status(400).json({ success: false, error: "User ID required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "User ID required" });
     }
 
-    // Folosim user_projects în loc de user_photos
     const [photos] = await pool.query(
       "SELECT id, filename, created_at as createdAt FROM user_projects WHERE user_id = ? ORDER BY created_at DESC",
       [userId]
@@ -788,11 +824,11 @@ app.get("/api/user-photos", async (req, res) => {
 
     res.json({
       success: true,
-      photos: photos.map(photo => ({
+      photos: photos.map((photo) => ({
         id: photo.id,
         filename: photo.filename,
         url: `/uploads/${photo.filename}`,
-        createdAt: photo.createdAt
+        createdAt: photo.createdAt,
       })),
     });
   } catch (error) {
@@ -801,8 +837,7 @@ app.get("/api/user-photos", async (req, res) => {
   }
 });
 
-// Save photo endpoint
-// Enhanced save photo endpoint that handles both saving to gallery and metadata
+// Endpoint to save edited photo
 app.post("/api/save-photo", upload.single("photo"), async (req, res) => {
   try {
     const { userId, metadata } = req.body;
@@ -814,7 +849,6 @@ app.post("/api/save-photo", upload.single("photo"), async (req, res) => {
       });
     }
 
-    // Save to database - using user_projects table which includes metadata
     const [result] = await pool.query(
       "INSERT INTO user_projects (user_id, filename, metadata) VALUES (?, ?, ?)",
       [userId, req.file.filename, metadata]
@@ -840,9 +874,9 @@ app.post("/api/save-photo", upload.single("photo"), async (req, res) => {
 
 // Endpoint to get all debug files in the uploads directory
 app.get("/api/debug-files", async (req, res) => {
-  const fs = require('fs');
+  const fs = require("fs");
   try {
-    const files = fs.readdirSync('./uploads');
+    const files = fs.readdirSync("./uploads");
     res.json({ success: true, files });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -855,4 +889,3 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Test endpoint: http://localhost:${PORT}`);
 });
-

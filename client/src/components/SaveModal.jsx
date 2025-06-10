@@ -1,19 +1,19 @@
-// src/components/SaveModal.jsx
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { FaDownload, FaSave, FaUser, FaTimes } from 'react-icons/fa';
+import React, { useState } from "react";
+import styled from "styled-components";
+import { FaDownload, FaSave, FaUser, FaTimes } from "react-icons/fa";
 
-const SaveModal = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  onDownload, 
+const SaveModal = ({
+  isOpen,
+  onClose,
+  onDownload,
+  onSave,
   onSaveAndDownload,
   isLoggedIn,
   fileName,
   onFileNameChange,
   fileType,
-  onFileTypeChange
+  onFileTypeChange,
+  downloadOnly = false,
 }) => {
   if (!isOpen) return null;
 
@@ -23,9 +23,9 @@ const SaveModal = ({
         <CloseButton onClick={onClose}>
           <FaTimes />
         </CloseButton>
-        
-        <ModalHeader>Save Your Edited Photo</ModalHeader>
-        
+
+        <ModalHeader>Download Your Photo</ModalHeader>
+
         <FileNameSection>
           <label>File Name:</label>
           <FileNameInput
@@ -34,21 +34,25 @@ const SaveModal = ({
             onChange={(e) => onFileNameChange(e.target.value)}
           />
         </FileNameSection>
-        
+
         <FileTypeSection>
           <label>File Format:</label>
-          <FileTypeSelect value={fileType} onChange={(e) => onFileTypeChange(e.target.value)}>
+          <FileTypeSelect
+            value={fileType}
+            onChange={(e) => onFileTypeChange(e.target.value)}
+          >
             <option value="jpg">JPG (.jpg)</option>
             <option value="png">PNG (.png)</option>
             <option value="webp">WebP (.webp)</option>
           </FileTypeSelect>
         </FileTypeSection>
-        
-        {isLoggedIn ? (
+
+        <SaveOption onClick={onDownload}>
+          <FaDownload /> Download
+        </SaveOption>
+
+        {!downloadOnly && isLoggedIn ? (
           <>
-            <SaveOption onClick={onDownload}>
-              <FaDownload /> Download Only
-            </SaveOption>
             <SaveOption onClick={onSave}>
               <FaSave /> Save to My Account Only
             </SaveOption>
@@ -60,14 +64,12 @@ const SaveModal = ({
             </SaveOption>
           </>
         ) : (
-          <>
-            <SaveOption onClick={onDownload}>
-              <FaDownload /> Download
-            </SaveOption>
+          !downloadOnly && (
             <LoginPrompt>
-              <FaUser /> Want to save your photos in your account? Log in next time!
+              <FaUser /> Want to save your photos in your account? Log in next
+              time!
             </LoginPrompt>
-          </>
+          )
         )}
       </ModalContent>
     </ModalOverlay>
@@ -105,7 +107,7 @@ const CloseButton = styled.button`
   font-size: 1.2rem;
   cursor: pointer;
   color: #666;
-  
+
   &:hover {
     color: #ff69b4;
   }
@@ -119,7 +121,7 @@ const ModalHeader = styled.h3`
 
 const FileNameSection = styled.div`
   margin-bottom: 15px;
-  
+
   label {
     display: block;
     margin-bottom: 5px;
@@ -132,7 +134,7 @@ const FileNameInput = styled.input`
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  
+
   &:focus {
     outline: none;
     border-color: #ff69b4;
@@ -141,7 +143,7 @@ const FileNameInput = styled.input`
 
 const FileTypeSection = styled.div`
   margin-bottom: 20px;
-  
+
   label {
     display: block;
     margin-bottom: 5px;
@@ -154,7 +156,7 @@ const FileTypeSelect = styled.select`
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  
+
   &:focus {
     outline: none;
     border-color: #ff69b4;
@@ -175,11 +177,11 @@ const SaveOption = styled.button`
   justify-content: center;
   gap: 8px;
   transition: background-color 0.2s;
-  
+
   &:hover {
     background-color: #ff4081;
   }
-  
+
   div {
     display: flex;
     gap: 8px;

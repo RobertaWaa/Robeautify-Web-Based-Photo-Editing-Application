@@ -12,15 +12,6 @@ CREATE TABLE users (
     reset_token_expires TIMESTAMP NULL DEFAULT NULL
 );
 
--- Table for user photos (edited images)
-CREATE TABLE user_photos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    filename VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
 -- Table for user projects (edited photo projects)
 CREATE TABLE user_projects (
     id INT AUTO_INCREMENT PRIMARY KEY,

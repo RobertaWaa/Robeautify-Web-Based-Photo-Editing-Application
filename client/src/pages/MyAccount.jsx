@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import styled from "styled-components";
+import SaveModal from "../components/SaveModal";
 import {
   FaUser,
   FaEnvelope,
@@ -12,6 +13,7 @@ import {
   FaImage,
   FaEye,
   FaEyeSlash,
+  FaAngleDown,
 } from "react-icons/fa";
 
 function MyAccount() {
@@ -32,7 +34,8 @@ function MyAccount() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loadingPhotos, setLoadingPhotos] = useState(true);
-const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
 
   // Password validation checks
   const passwordChecks = {
@@ -61,36 +64,38 @@ const [imageLoaded, setImageLoaded] = useState(false);
     });
 
     // Fetch user's edited photos
-    // MyAccount.jsx - Actualizează partea de fetch
-const fetchEditedPhotos = async () => {
-  try {
-    setLoadingPhotos(true);
-    const response = await fetch(
-      `http://localhost:5000/api/user-photos?userId=${currentUser.id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+    const fetchEditedPhotos = async () => {
+      try {
+        setLoadingPhotos(true);
+        const response = await fetch(
+          `http://localhost:5000/api/user-photos?userId=${currentUser.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+
+        const data = await response.json();
+
+        // Debugging: log the data received from the API
+        //console.log("Photos data from API:", data);
+
+        if (data.success && data.photos) {
+          setEditedPhotos(data.photos);
+        } else {
+          setError(data.error || "Failed to load photos");
+        }
+      } catch (error) {
+        console.error("Error fetching photos:", error);
+        setError("Failed to load your photo gallery. Please try again later.");
+      } finally {
+        setLoadingPhotos(false);
       }
-    );
-
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-    const data = await response.json();
-    console.log("Photos data from API:", data); // Debugging
-
-    if (data.success && data.photos) {
-      setEditedPhotos(data.photos);
-    } else {
-      setError(data.error || "Failed to load photos");
-    }
-  } catch (error) {
-    console.error("Error fetching photos:", error);
-    setError("Failed to load your photo gallery. Please try again later.");
-  } finally {
-    setLoadingPhotos(false);
-  }
-};
+    };
 
     fetchEditedPhotos();
   }, [currentUser?.id]);
@@ -219,7 +224,74 @@ const fetchEditedPhotos = async () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
 
-  console.log("Edited photos state:", editedPhotos);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [fileName, setFileName] = useState("robeautify-edit");
+  const [fileType, setFileType] = useState("jpg");
+
+  const handleDownload = (photo) => {
+    setSelectedPhoto(photo);
+    setFileName(photo.filename.split(".")[0]);
+    setShowSaveModal(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleDelete = async (photoId) => {
+    try {
+      console.log("Deleting photo with ID:", photoId);
+      const response = await fetch(
+        `http://localhost:5000/api/delete-photo/${photoId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Delete error details:", errorData);
+        throw new Error(errorData.error || "Failed to delete photo");
+      }
+
+      setEditedPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
+      setOpenDropdownId(null);
+    } catch (error) {
+      console.error("Full delete error:", error);
+      setError("Failed to delete photo");
+    }
+  };
+
+  const handleModalDownload = () => {
+    if (!selectedPhoto) return;
+
+    const extension = fileType === "jpg" ? "jpeg" : fileType;
+    const mimeType = `image/${extension}`;
+
+    // Create an image element to load the photo
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = `http://localhost:5000/uploads/${selectedPhoto.filename}`;
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      const dataUrl = canvas.toDataURL(mimeType);
+      const link = document.createElement("a");
+      link.download = `${fileName}.${fileType}`;
+      link.href = dataUrl;
+      link.click();
+    };
+
+    setShowSaveModal(false);
+  };
+  //Debugging: log the edited photos state
+  //console.log("Edited photos state:", editedPhotos);
 
   if (!currentUser) return null;
 
@@ -426,7 +498,18 @@ const fetchEditedPhotos = async () => {
                 <FaCalendarAlt />
                 <div>
                   <h3>Member Since</h3>
-                  <p>{new Date().toLocaleDateString()}</p>
+                  <p>
+                    {currentUser?.createdAt
+                      ? new Date(currentUser.createdAt).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )
+                      : "Not available"}
+                  </p>
                 </div>
               </DetailItem>
 
@@ -440,38 +523,69 @@ const fetchEditedPhotos = async () => {
         </DetailsSection>
 
         <GallerySection>
-  <GalleryHeader>Your Photo Gallery</GalleryHeader>
-  {loadingPhotos ? (
-  <LoadingMessage>Loading your photos...</LoadingMessage>
-) : editedPhotos.length > 0 ? (
-  // MyAccount.jsx - Partea de render
-<GalleryGrid>
-  {editedPhotos.map((photo) => (
-    <GalleryItem key={photo.id}>
-      <img
-  src={`http://localhost:5000/uploads/${photo.filename}`}
-  onError={(e) => {
-    e.target.onerror = null;
-    e.target.src = '/placeholder-image.jpg';
-  }}
-/>
-      <PhotoOverlay>
-        <PhotoDate>
-          {new Date(photo.createdAt).toLocaleDateString()}
-        </PhotoDate>
-      </PhotoOverlay>
-    </GalleryItem>
-  ))}
-</GalleryGrid>
-) : (
-  <EmptyGallery>
-    <FaImage />
-    <p>You haven't edited any photos yet</p>
-    <Link to="/edit-photo">Start editing now</Link>
-  </EmptyGallery>
-)}
-</GallerySection>
+          <GalleryHeader>Your Photo Gallery</GalleryHeader>
+          {loadingPhotos ? (
+            <LoadingMessage>Loading your photos...</LoadingMessage>
+          ) : editedPhotos.length > 0 ? (
+            <GalleryGrid>
+              {editedPhotos.map((photo) => (
+                <GalleryItem key={photo.id}>
+                  <img
+                    src={`http://localhost:5000/uploads/${photo.filename}`}
+                    alt={`Edited photo ${photo.id}`}
+                    loading="lazy"
+                  />
+
+                  <PhotoOverlay>
+                    <DropdownContainer>
+                      <DropdownButton
+                        onClick={() =>
+                          setOpenDropdownId(
+                            openDropdownId === photo.id ? null : photo.id
+                          )
+                        }
+                      >
+                        <FaAngleDown />
+                      </DropdownButton>
+                      <DropdownContent $isOpen={openDropdownId === photo.id}>
+                        <DropdownItem onClick={() => handleDownload(photo)}>
+                          Download
+                        </DropdownItem>
+                        <DropdownItem onClick={() => handleDelete(photo.id)}>
+                          Delete
+                        </DropdownItem>
+                      </DropdownContent>
+                    </DropdownContainer>
+                  </PhotoOverlay>
+
+                  <PhotoDate>
+                    {new Date(photo.createdAt).toLocaleDateString()}
+                  </PhotoDate>
+                </GalleryItem>
+              ))}
+            </GalleryGrid>
+          ) : (
+            <EmptyGallery>
+              <FaImage />
+              <p>You haven't edited any photos yet</p>
+              <Link to="/edit-photo">Start editing now</Link>
+            </EmptyGallery>
+          )}
+        </GallerySection>
       </AccountContent>
+      <SaveModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onDownload={handleModalDownload}
+        onSave={() => {}}
+        onSaveAndDownload={() => {}}
+        isLoggedIn={!!currentUser}
+        fileName={fileName}
+        onFileNameChange={setFileName}
+        fileType={fileType}
+        onFileTypeChange={setFileType}
+        downloadOnly={true}
+      />
     </AccountContainer>
   );
 }
@@ -542,12 +656,12 @@ const SectionHeader = styled.div`
   margin-bottom: 25px;
   padding-bottom: 15px;
   border-bottom: 1px solid #eee;
-  gap: 20px; /* Added gap for consistent spacing */
+  gap: 20px;
 
   h2 {
     color: #ff69b4;
     font-size: 1.8rem;
-    margin-right: auto; /* Ensures the title takes available space */
+    margin-right: auto;
   }
 `;
 
@@ -573,17 +687,16 @@ const EditButton = styled.button`
 const DetailItem = styled.div`
   display: flex;
   margin-bottom: 20px;
-  align-items: center; /* Asigură aliniere verticală corectă */
+  align-items: center;
 
   > svg {
-    /* Stil pentru icon-urile principale (FaUser, FaEnvelope etc.) */
     color: #ff69b4;
     font-size: 1.2rem;
-    min-width: 24px; /* Asigură lățime fixă */
+    min-width: 24px;
     margin-right: 15px;
 
     @media (max-width: 480px) {
-      font-size: 1.4rem; /* Mărește puțin pe mobil */
+      font-size: 1.4rem;
       margin-right: 12px;
     }
   }
@@ -630,8 +743,8 @@ const PasswordInputField = styled.input`
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 0.95rem;
-  min-width: 220px; /* Increased from 200px to 220px */
-  width: 100%; /* Ensure it uses available space */
+  min-width: 220px;
+  width: 100%;
 
   &:focus {
     border-color: #ff69b4;
@@ -653,10 +766,10 @@ const PasswordToggleButton = styled.button`
   }
 
   svg {
-    font-size: 1rem; /* Default size */
+    font-size: 1rem;
 
     @media (max-width: 480px) {
-      font-size: 1.2rem; /* Larger on mobile */
+      font-size: 1.2rem;
     }
   }
 `;
@@ -799,12 +912,13 @@ const GalleryGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
+  overflow: visible;
 `;
 
 const GalleryItem = styled.div`
   position: relative;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
   aspect-ratio: 1/1;
@@ -848,18 +962,76 @@ const EmptyGallery = styled.div`
 
 const PhotoOverlay = styled.div`
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.5);
   padding: 8px;
-  color: white;
-  font-size: 0.8rem;
+  display: flex;
+  justify-content: flex-end;
+  z-index: 2;
 `;
 
 const PhotoDate = styled.span`
-  display: block;
-  text-align: center;
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+`;
+
+const DropdownContainer = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const DropdownButton = styled.button`
+  background: rgba(255, 255, 255, 0.8);
+  border: none;
+  color: #ff69b4;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.9);
+  }
+`;
+
+const DropdownContent = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  min-width: 120px;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  border-radius: 5px;
+  overflow: hidden;
+  display: ${(props) => (props.$isOpen ? "block" : "none")};
+`;
+
+const DropdownItem = styled.button`
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #333;
+  font-size: 0.9rem;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
 `;
 
 export default MyAccount;
