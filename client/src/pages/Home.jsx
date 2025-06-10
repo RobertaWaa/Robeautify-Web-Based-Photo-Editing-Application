@@ -29,13 +29,17 @@ function Home() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add("show-element");
+            observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.1 }
+      {
+        threshold: 0.15,
+        rootMargin: "0px 0px -100px 0px",
+      }
     );
 
-    const animatedElements = document.querySelectorAll(".animate-on-scroll");
+    const animatedElements = document.querySelectorAll(".animate-content");
     animatedElements.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
@@ -46,18 +50,18 @@ function Home() {
       {/* Modern Hero Section with Gradient Mesh Background */}
       <HeroSection className="d-flex flex-column justify-content-center align-items-center">
         <HeroContent>
-          <h1 className="display-2 text-white animate-on-scroll">
+          <h1 className="display-2 text-white animate-content">
             <span className="gradient-text">Filter, edit, shine.</span>
           </h1>
-          <h2 className="text-white mb-4 animate-on-scroll">Robeautify.</h2>
-          <p className="lead text-white text-center mb-5 animate-on-scroll">
+          <h2 className="text-white mb-4 animate-content">Robeautify.</h2>
+          <p className="lead text-white text-center mb-5 animate-content">
             Transform your photos into stunning works of art with just a few
             clicks.
             <br />
             Enjoy simple, intuitive, and professional editing tools designed for
             everyone.
           </p>
-          <StyledWrapper className="animate-on-scroll">
+          <StyledWrapper className="animate-content">
             <Link to="/edit-photo" id="btn">
               <span>Start Editing Now</span>
               <svg
@@ -84,12 +88,10 @@ function Home() {
       {/* How It Works Section */}
       <HowItWorksSection>
         <div className="text-center">
-          <SectionTitle className="animate-on-scroll">
-            How it works?
-          </SectionTitle>
+          <SectionTitle className="animate-content">How it works?</SectionTitle>
           <StyledCards>
             <div className="cards">
-              <FeatureCard className="animate-on-scroll">
+              <FeatureCard className="animate-content">
                 <NumberBadge>1</NumberBadge>
                 <h3>Bring your memories to life!</h3>
                 <p>
@@ -98,7 +100,7 @@ function Home() {
                 </p>
               </FeatureCard>
               <FeatureCard
-                className="animate-on-scroll"
+                className="animate-content"
                 style={{ transitionDelay: "0.2s" }}
               >
                 <NumberBadge>2</NumberBadge>
@@ -109,7 +111,7 @@ function Home() {
                 </p>
               </FeatureCard>
               <FeatureCard
-                className="animate-on-scroll"
+                className="animate-content"
                 style={{ transitionDelay: "0.4s" }}
               >
                 <NumberBadge>3</NumberBadge>
@@ -126,12 +128,12 @@ function Home() {
 
       {/* Features Carousel Section */}
       <FeaturesSection>
-        <SectionTitle className="animate-on-scroll">
+        <SectionTitle className="animate-content">
           The magic of editing at your fingertips
         </SectionTitle>
         <StyledCarousel>
           <Slider {...settings}>
-            <FeatureSlide className="animate-on-scroll">
+            <FeatureSlide>
               <img
                 src={easyToUseImage}
                 alt="Easy-to-use Interface"
@@ -140,10 +142,7 @@ function Home() {
               <h3>Easy-to-use Interface</h3>
               <p>Intuitive tools for seamless editing.</p>
             </FeatureSlide>
-            <FeatureSlide
-              className="animate-on-scroll"
-              style={{ transitionDelay: "0.2s" }}
-            >
+            <FeatureSlide style={{ transitionDelay: "0.2s" }}>
               <img
                 src={creativeFiltersImage}
                 alt="Creative Filters"
@@ -155,10 +154,7 @@ function Home() {
                 unique look.
               </p>
             </FeatureSlide>
-            <FeatureSlide
-              className="animate-on-scroll"
-              style={{ transitionDelay: "0.4s" }}
-            >
+            <FeatureSlide style={{ transitionDelay: "0.4s" }}>
               <img src={itsFreeImage} alt="It's free" className="slide-image" />
               <h3>It's free</h3>
               <p>Anyone can use it anytime for free!</p>
@@ -170,10 +166,10 @@ function Home() {
       {/* Community Section */}
       <CommunitySection>
         <div className="text-center">
-          <SectionTitle className="animate-on-scroll">
+          <SectionTitle className="animate-content">
             Join Our Creative Community
           </SectionTitle>
-          <div className="animate-on-scroll">
+          <div className="animate-content">
             <JoinNowButton />
           </div>
         </div>
@@ -182,16 +178,13 @@ function Home() {
       {/* Multi-Device Section */}
       <MultiDeviceSection>
         <div className="container">
-          <SectionTitle className="animate-on-scroll">
+          <SectionTitle className="animate-content">
             Available on both Mobile & Web
           </SectionTitle>
-          <p className="lead animate-on-scroll">
+          <p className="lead animate-content">
             Enjoy creative freedom anywhere, anytime!
           </p>
-          <div
-            className="animate-on-scroll"
-            style={{ transitionDelay: "0.3s" }}
-          >
+          <div className="animate-content" style={{ transitionDelay: "0.3s" }}>
             <img
               src={deviceMockup}
               alt="Mobile and Web App Mockups"
@@ -210,19 +203,43 @@ function Home() {
 // Styled Components
 const GlobalStyles = styled.div`
   /* Scroll Animations */
-  .animate-on-scroll {
+  .animate-content {
     opacity: 0;
     transform: translateY(30px);
-    transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
   }
 
-  .animate-on-scroll.show-element {
-    opacity: 1;
-    transform: translateY(0);
+  .animate-content.show-element {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+  }
+
+  /* Delay-uri personalizate pentru fiecare element */
+  .hero-section .animate-content:nth-child(1) {
+    transition-delay: 0.1s;
+  }
+  .hero-section .animate-content:nth-child(2) {
+    transition-delay: 0.2s;
+  }
+  .hero-section .animate-content:nth-child(3) {
+    transition-delay: 0.3s;
+  }
+  .hero-section .animate-content:nth-child(4) {
+    transition-delay: 0.4s;
+  }
+
+  .features-section .animate-content:nth-child(1) {
+    transition-delay: 0.2s;
+  }
+  .features-section .animate-content:nth-child(2) {
+    transition-delay: 0.3s;
+  }
+  .features-section .animate-content:nth-child(3) {
+    transition-delay: 0.4s;
   }
 
   @media (prefers-reduced-motion) {
-    .animate-on-scroll {
+    .animate-content {
       transition: none;
       opacity: 1;
       transform: none;
@@ -345,12 +362,13 @@ const FeatureCard = styled.div`
   padding: 40px 30px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
   text-align: center;
-  transition: all 0.3s ease;
+  transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1) !important;
   max-width: 400px;
   margin: 0 auto;
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 105, 180, 0.1);
+  will-change: transform, opacity;
 
   h3 {
     color: #2d3748;
@@ -364,7 +382,7 @@ const FeatureCard = styled.div`
   }
 
   &:hover {
-    transform: translateY(-10px);
+    transform: translateY(-10px) scale(1.03);
     box-shadow: 0 15px 40px rgba(255, 105, 180, 0.15);
   }
 `;
