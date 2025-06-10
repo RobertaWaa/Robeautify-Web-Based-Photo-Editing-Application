@@ -11,7 +11,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import styled from "styled-components";
-import "../assets/styles/edit-photo.css";
 import {
   FaTrash,
   FaPaintBrush,

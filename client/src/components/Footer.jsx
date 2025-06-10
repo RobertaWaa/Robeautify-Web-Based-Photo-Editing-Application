@@ -4,6 +4,86 @@ import { useAuth } from '../contexts/AuthContext';
 import styled from 'styled-components';
 import logo from '../assets/images/logo.png';
 
+function Footer() {
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+  const currentYear = new Date().getFullYear();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    window.scrollTo(0, 0); 
+  };
+
+  const handleLinkClick = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  };
+
+  return (
+    <FooterWrapper>
+      <FooterContainer>
+        <FooterGrid>
+          <FooterColumn>
+            <FooterLogoContainer>
+              <LogoImage src={logo} alt="Robeautify Logo" />
+              <LogoText>Robeautify</LogoText>
+            </FooterLogoContainer>
+            <FooterText>
+              Your photos, perfected with just a few clicks!
+            </FooterText>
+          </FooterColumn>
+          
+          <FooterColumn>
+            <FooterHeading>Navigation</FooterHeading>
+            <FooterLink to="/" onClick={handleLinkClick}>Home</FooterLink>
+            <FooterLink to="/edit-photo" onClick={handleLinkClick}>Edit Photo</FooterLink>
+            <FooterLink to="/about" onClick={handleLinkClick}>About Us</FooterLink>
+            <FooterLink to="/contact" onClick={handleLinkClick}>Contact</FooterLink>
+          </FooterColumn>
+          
+          <FooterColumn>
+            <FooterHeading>Account</FooterHeading>
+            {currentUser ? (
+              <>
+                <FooterLink to="/my-account" onClick={handleLinkClick}>My Account</FooterLink>
+                <FooterText as="button" onClick={handleLogout} style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  textAlign: 'left',
+                  padding: 0
+                }}>
+                  Log Out
+                </FooterText>
+              </>
+            ) : (
+              <>
+                <FooterLink to="/login" onClick={handleLinkClick}>Log In</FooterLink>
+                <FooterLink to="/signup" onClick={handleLinkClick}>Sign Up</FooterLink>
+              </>
+            )}
+          </FooterColumn>
+          
+          <FooterColumn>
+            <FooterHeading>Contact</FooterHeading>
+            <FooterText>robeautify@gmail.com</FooterText>
+            <FooterText>+40 123 456 789</FooterText>
+            <FooterText>Bucharest, Romania</FooterText>
+          </FooterColumn>
+        </FooterGrid>
+        
+        <FooterBottom>
+          <FooterText>© {currentYear} Robeautify. All rights reserved.</FooterText>
+          <FooterLegalLinks>
+            <FooterLink to="/privacy-policy" onClick={handleLinkClick}>Privacy Policy</FooterLink>
+            <FooterLink to="/terms-of-service" onClick={handleLinkClick}>Terms of Service</FooterLink>
+          </FooterLegalLinks>
+        </FooterBottom>
+      </FooterContainer>
+    </FooterWrapper>
+  );
+}
+
 const FooterWrapper = styled.footer`
   width: 100%;
   padding: 2rem 0 1rem;
@@ -130,85 +210,5 @@ const FooterLegalLinks = styled.div`
     margin-top: 0;
   }
 `;
-
-function Footer() {
-  const { currentUser, logout } = useAuth();
-  const navigate = useNavigate();
-  const currentYear = new Date().getFullYear();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    window.scrollTo(0, 0); // Adaugă scroll la top după logout
-  };
-
-  const handleLinkClick = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll smooth la top
-  };
-
-  return (
-    <FooterWrapper>
-      <FooterContainer>
-        <FooterGrid>
-          <FooterColumn>
-            <FooterLogoContainer>
-              <LogoImage src={logo} alt="Robeautify Logo" />
-              <LogoText>Robeautify</LogoText>
-            </FooterLogoContainer>
-            <FooterText>
-              Your photos, perfected with just a few clicks!
-            </FooterText>
-          </FooterColumn>
-          
-          <FooterColumn>
-            <FooterHeading>Navigation</FooterHeading>
-            <FooterLink to="/" onClick={handleLinkClick}>Home</FooterLink>
-            <FooterLink to="/edit-photo" onClick={handleLinkClick}>Edit Photo</FooterLink>
-            <FooterLink to="/about" onClick={handleLinkClick}>About Us</FooterLink>
-            <FooterLink to="/contact" onClick={handleLinkClick}>Contact</FooterLink>
-          </FooterColumn>
-          
-          <FooterColumn>
-            <FooterHeading>Account</FooterHeading>
-            {currentUser ? (
-              <>
-                <FooterLink to="/my-account" onClick={handleLinkClick}>My Account</FooterLink>
-                <FooterText as="button" onClick={handleLogout} style={{ 
-                  background: 'none', 
-                  border: 'none', 
-                  cursor: 'pointer', 
-                  textAlign: 'left',
-                  padding: 0
-                }}>
-                  Log Out
-                </FooterText>
-              </>
-            ) : (
-              <>
-                <FooterLink to="/login" onClick={handleLinkClick}>Log In</FooterLink>
-                <FooterLink to="/signup" onClick={handleLinkClick}>Sign Up</FooterLink>
-              </>
-            )}
-          </FooterColumn>
-          
-          <FooterColumn>
-            <FooterHeading>Contact</FooterHeading>
-            <FooterText>robeautify@gmail.com</FooterText>
-            <FooterText>+40 123 456 789</FooterText>
-            <FooterText>Bucharest, Romania</FooterText>
-          </FooterColumn>
-        </FooterGrid>
-        
-        <FooterBottom>
-          <FooterText>© {currentYear} Robeautify. All rights reserved.</FooterText>
-          <FooterLegalLinks>
-            <FooterLink to="/privacy-policy" onClick={handleLinkClick}>Privacy Policy</FooterLink>
-            <FooterLink to="/terms-of-service" onClick={handleLinkClick}>Terms of Service</FooterLink>
-          </FooterLegalLinks>
-        </FooterBottom>
-      </FooterContainer>
-    </FooterWrapper>
-  );
-}
 
 export default Footer;

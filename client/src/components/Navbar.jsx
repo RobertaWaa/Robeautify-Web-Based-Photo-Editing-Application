@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { motion } from "framer-motion";
 import { FiMenu, FiX } from "react-icons/fi";
 import logo from "../assets/images/logo.png";
-import "../assets/styles/style.css";
+import "../assets/styles/navbar.css";
 
 function Navbar() {
   const { currentUser, logout } = useAuth();

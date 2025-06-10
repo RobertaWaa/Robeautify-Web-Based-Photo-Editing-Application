@@ -1,5 +1,4 @@
 body {
-  font-family: "Arial", sans-serif;
   margin: 0;
   padding: 0;
   background-color: #fff0f5;
@@ -62,7 +61,6 @@ a,
   color: #fff;
 }
 
-/* Navbar Styles */
 .navbar {
   background-color: #ffcccb;
   padding-left: 1.5rem;
@@ -108,7 +106,6 @@ a,
   color: var(--robeautify) !important;
 }
 
-/* Nav Link Styles */
 .nav-link {
   transition: all 0.3s ease;
   padding: 0.5rem 1rem !important;
@@ -286,23 +283,6 @@ a,
 .navbar-toggler:focus {
   outline: none;
   box-shadow: none;
-}
-
-/* Footer Styles */
-.footer {
-  background-color: #ffcccb;
-  color: #333;
-  padding: 20px 0;
-  text-align: center;
-  margin-top: auto;
-}
-
-.footer a {
-  color: #333;
-}
-
-.footer a:hover {
-  color: #ff69b4;
 }
 
 /* Desktop Styles */
