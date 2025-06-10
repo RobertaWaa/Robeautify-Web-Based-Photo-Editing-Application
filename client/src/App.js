@@ -40,7 +40,7 @@ const router = createBrowserRouter(
           onScriptLoadError={() =>
             console.log("Failed to load Google OAuth script")
           }
-          onScriptLoadSuccess={() => console.log("Google OAuth script loaded")}
+          //onScriptLoadSuccess={() => console.log("Google OAuth script loaded")}
         >
           <AuthProvider>
             <Layout />
